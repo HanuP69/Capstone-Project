@@ -1,0 +1,7 @@
+{
+  "sample_size": 50,
+  "annotator_1_vs_annotator_2_kappa": 0.814,
+  "kappa_target_met": true,
+  "inter_annotator_raw_agreement_pct": 88.0,
+  "pipeline_to_human_consensus_agreement_pct": 96.0
+}

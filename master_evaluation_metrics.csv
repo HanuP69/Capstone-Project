@@ -1,0 +1,6 @@
+Condition,Dataset,Accuracy,Precision,Recall,F1,Hallucination_Rate_%,Latency_s
+Baseline A: Plain LLM,NIT Jamshedpur,0.333,0.111,0.333,0.167,100.0,0.85
+Baseline B: RAG-only,NIT Jamshedpur,0.65,0.68,0.65,0.66,35.0,1.15
+Baseline C: Self-consistency,NIT Jamshedpur,0.333,0.111,0.333,0.167,100.0,2.9
+Proposed Verification Pipeline,NIT Jamshedpur,0.94,0.957,0.94,0.951,0.0,1.45
+Proposed Verification Pipeline,Public University,1.0,1.0,1.0,1.0,0.0,1.4

@@ -1,0 +1,14 @@
+[
+  {
+    "timestamp": 1794073733.5039687,
+    "type": "claim",
+    "institution": "NITJ",
+    "claim": "The semester registration deadline at NIT Jamshedpur is 15 August 2026.",
+    "F": 1.0,
+    "P": 0.5,
+    "D": 0.952,
+    "G": 0.836,
+    "decision": "PASS",
+    "pred": "true"
+  }
+]
