@@ -1,0 +1,14 @@
+\begin{table}
+\caption{Derivation of Groundedness Scoring Weights: Heuristic vs Logistic Regression Meta-Learner Across Institutions}
+\label{tab:meta_learner_weights}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Weighting_Method & w1_Fact & w2_Policy & w3_Grounding & NITJ_Accuracy & PublicUniv_Accuracy & MFAQ_Accuracy & Cross_Dataset_Mean_Accuracy \\
+\midrule
+Method 1: Equal Weights (Baseline) & 0.333000 & 0.333000 & 0.334000 & 91.700000 & 100.000000 & 78.200000 & 89.900000 \\
+Method 2: Fixed Heuristic Weights & 0.400000 & 0.300000 & 0.300000 & 91.700000 & 100.000000 & 78.200000 & 89.900000 \\
+Method 3: Grid Search Tuned & 0.500000 & 0.300000 & 0.200000 & 91.700000 & 100.000000 & 78.200000 & 89.900000 \\
+Method 4: Logistic Regression Meta-Learner (Ours) & 0.508000 & 0.315000 & 0.177000 & 91.700000 & 100.000000 & 78.200000 & 89.900000 \\
+\bottomrule
+\end{tabular}
+\end{table}

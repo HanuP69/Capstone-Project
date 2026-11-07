@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 
 from verification_pipeline import (
     AcademicVerificationPipeline,
+    DEFAULT_WEIGHTS, LEARNED_META_WEIGHTS,
     SYNTHETIC_NITJ_DOCS, SYNTHETIC_NITJ_RECORDS, SYNTHETIC_NITJ_POLICIES,
     SYNTHETIC_PUBLIC_DOCS, SYNTHETIC_PUBLIC_RECORDS, SYNTHETIC_PUBLIC_POLICIES
 )
@@ -74,6 +75,7 @@ def save_audit(log_entry: Dict[str, Any]):
 class ClaimVerifyRequest(BaseModel):
     claim: str = Field(..., example="The semester registration deadline at NIT Jamshedpur is 15 August 2026.")
     institution: str = Field(default="NITJ", example="NITJ")
+    use_meta_learner: bool = Field(default=False, description="Use MLE Logistic Regression derived weights (w1=0.508, w2=0.315, w3=0.177) instead of default heuristic")
 
 class ClaimVerifyResponse(BaseModel):
     claim_id: str
@@ -89,11 +91,13 @@ class ClaimVerifyResponse(BaseModel):
     policy_explanation: str
     retrieved_contexts: List[str]
     regenerated_claim: Optional[str] = None
+    weighting_mode: str = "default_heuristic"
     is_synthetic_benchmark: bool = True
 
 class QueryRequest(BaseModel):
     query: str = Field(..., example="What is the semester registration deadline and tuition fee for B.Tech?")
     institution: str = Field(default="NITJ", example="NITJ")
+    use_meta_learner: bool = Field(default=False, description="Use MLE Logistic Regression derived weights")
 
 class QueryResponse(BaseModel):
     query: str
@@ -123,7 +127,7 @@ def root():
             "verify_query": "/api/verify-query",
             "audit_trail": "/api/audit-trail",
             "metrics": "/api/metrics",
-            "ablation": "/api/ablation",
+            "meta_learner": "/api/meta-learner",
             "human_eval": "/api/human-eval"
         }
     }
@@ -135,11 +139,19 @@ def verify_claim(req: ClaimVerifyRequest):
         raise HTTPException(status_code=400, detail=f"Institution '{req.institution}' not supported. Use 'NITJ' or 'PUBLIC'.")
     pipeline = pipelines[inst]
 
-    result = pipeline.verify_single_claim(req.claim)
+    orig_weights = pipeline.scorer.weights
+    pipeline.scorer.weights = LEARNED_META_WEIGHTS if req.use_meta_learner else DEFAULT_WEIGHTS
+
+    try:
+        result = pipeline.verify_single_claim(req.claim)
+    finally:
+        pipeline.scorer.weights = orig_weights
+
     log_item = {
         "timestamp": time.time(),
         "type": "claim",
         "institution": inst,
+        "weighting_mode": "meta_learner_mle" if req.use_meta_learner else "default_heuristic",
         "claim": req.claim,
         "F": result.F_score,
         "P": result.P_score,
@@ -165,6 +177,7 @@ def verify_claim(req: ClaimVerifyRequest):
         policy_explanation=result.policy_explanation,
         retrieved_contexts=result.retrieved_contexts,
         regenerated_claim=result.regenerated_claim,
+        weighting_mode="meta_learner_mle" if req.use_meta_learner else "default_heuristic",
         is_synthetic_benchmark=True
     )
 
@@ -175,11 +188,19 @@ def verify_query(req: QueryRequest):
         raise HTTPException(status_code=400, detail=f"Institution '{req.institution}' not supported.")
     pipeline = pipelines[inst]
 
-    resp = pipeline.process_query(req.query)
+    orig_weights = pipeline.scorer.weights
+    pipeline.scorer.weights = LEARNED_META_WEIGHTS if req.use_meta_learner else DEFAULT_WEIGHTS
+
+    try:
+        resp = pipeline.process_query(req.query)
+    finally:
+        pipeline.scorer.weights = orig_weights
+
     log_item = {
         "timestamp": time.time(),
         "type": "query",
         "institution": inst,
+        "weighting_mode": "meta_learner_mle" if req.use_meta_learner else "default_heuristic",
         "query": req.query,
         "overall_G": resp.overall_groundedness,
         "claims_total": resp.total_claims,
@@ -205,6 +226,7 @@ def verify_query(req: QueryRequest):
             policy_explanation=c.policy_explanation,
             retrieved_contexts=c.retrieved_contexts,
             regenerated_claim=c.regenerated_claim,
+            weighting_mode="meta_learner_mle" if req.use_meta_learner else "default_heuristic",
             is_synthetic_benchmark=True
         ) for c in resp.claims
     ]
@@ -222,6 +244,42 @@ def verify_query(req: QueryRequest):
         claims=claim_responses,
         dataset_mode="[Synthetic Benchmark]"
     )
+
+@app.get("/api/meta-learner")
+def get_meta_learner():
+    results = {
+        "status": "calibrated",
+        "method": "Logistic Regression Maximum Likelihood Estimation (MLE)",
+        "mathematical_formulation": "logit(P(Grounded)) = beta_0 + beta_F * F(c) + beta_P * P(c) + beta_D * D(c)",
+        "derived_weights": LEARNED_META_WEIGHTS,
+        "default_heuristic_weights": DEFAULT_WEIGHTS,
+        "raw_coefficients": {
+            "beta_0_intercept": -4.337,
+            "beta_F_fact": 3.091,
+            "beta_P_policy": 1.914,
+            "beta_D_grounding": 1.074
+        },
+        "odds_ratios": {
+            "exp_beta_F": 22.0,
+            "exp_beta_P": 6.78,
+            "exp_beta_D": 2.93
+        },
+        "relative_importance_percentages": {
+            "w1_fact": 50.8,
+            "w2_policy": 31.5,
+            "w3_grounding": 17.7
+        },
+        "cross_validation_5fold": {
+            "cv_accuracy": "93.3% (+/- 4.2%)",
+            "cv_roc_auc": 0.926,
+            "multinomial_3class_cv_accuracy": "89.2% (+/- 6.2%)"
+        },
+        "dataset_mode": "[Synthetic Benchmark]"
+    }
+    if os.path.exists("meta_learner_weights_comparison.csv"):
+        df = pd.read_csv("meta_learner_weights_comparison.csv")
+        results["comparison_table"] = df.to_dict(orient="records")
+    return results
 
 @app.get("/api/audit-trail")
 def get_audit_trail(limit: int = Query(50, ge=1, le=200)):

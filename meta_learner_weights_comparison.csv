@@ -1,0 +1,5 @@
+Weighting_Method,w1_Fact,w2_Policy,w3_Grounding,Derivation_Basis,NITJ_Accuracy,PublicUniv_Accuracy,MFAQ_Accuracy,Cross_Dataset_Mean_Accuracy,Cross_Dataset_Mean_Macro_F1,NITJ_Hallucination_Rate
+Method 1: Equal Weights (Baseline),0.333,0.333,0.334,Equal a-priori weighting,91.7,100.0,78.2,89.9,0.862,2.5
+Method 2: Fixed Heuristic Weights,0.4,0.3,0.3,Empirical heuristic from proposal,91.7,100.0,78.2,89.9,0.862,2.5
+Method 3: Grid Search Tuned,0.5,0.3,0.2,Brute-force grid search on primary,91.7,100.0,78.2,89.9,0.862,2.5
+Method 4: Logistic Regression Meta-Learner (Ours),0.508,0.315,0.177,MLE-derived via Level-1 Stacking,91.7,100.0,78.2,89.9,0.862,2.5
