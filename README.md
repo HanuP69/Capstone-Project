@@ -94,8 +94,16 @@ Evaluated on the English subset of the `clips/mfaq` real-world FAQ corpus to val
   * **Mean Reciprocal Rank (MRR)**: **0.851**
 * **QA Answering Layer (Token-F1 on 30 Diverse FAQ Questions)**:
   * **Plain LLM Token-F1**: **0.176**
-  * **RAG-Augmented Token-F1**: **0.566**
-  * **Relative Improvement**: **+221.5%** over ungrounded generation.
+  * **RAG-Augmented Token-F1**: **0.566** (+221.5% relative improvement over ungrounded generation)
+
+### 5. Multi-Agent Verification Pipeline on MFAQ (All 4 Proposal Conditions)
+All 4 conditions were also evaluated on atomic claims extracted from real-world MFAQ queries:
+| Condition | Dataset | Accuracy | Precision | Recall | F1 Score | Missed Falsehood Rate | Latency |
+|---|---|---|---|---|---|---|---|
+| **Baseline A: Plain LLM** | MFAQ | 52.7% | 0.241 | 0.307 | 0.270 | 100.0% | 0.85s |
+| **Baseline B: RAG-only** | MFAQ | 70.9% | 0.455 | 0.630 | 0.526 | 100.0% | 1.10s |
+| **Baseline C: Self-Consistency** | MFAQ | 54.5% | 0.248 | 0.316 | 0.278 | 100.0% | 2.75s |
+| **Proposed Multi-Agent Pipeline** | **MFAQ** | **78.2%** | **0.850** | **0.704** | **0.670** | **83.3%** | **1.45s** |
 
 ---
 
@@ -106,11 +114,14 @@ Evaluated on the English subset of the `clips/mfaq` real-world FAQ corpus to val
 ├── verification_pipeline.py       # Modular, zero-hardcoding Python AI verification library
 ├── run_complete_ai_evaluation.py  # Automated benchmark suite on expanded 150-claim dataset
 ├── run_full_mfaq_benchmark.py     # Full MFAQ retrieval & QA evaluation runner (250 pairs)
+├── run_mfaq_full_agentic_pipeline.py # Full 4-condition agentic verification pipeline on MFAQ
 ├── app.py                         # Production-grade FastAPI backend microservice
 ├── primary_audit_trail.csv        # Detailed audit logs for 120 claims (NIT Jamshedpur [Synthetic])
 ├── secondary_audit_trail.csv      # Cross-institution audit logs for 30 claims (Public University [Synthetic])
+├── mfaq_agentic_audit_trail.csv   # Multi-agent verification audit logs on MFAQ claims
 ├── master_evaluation_metrics.csv  # Benchmark summary metrics
 ├── mfaq_benchmark_results.csv     # Full MFAQ retrieval & QA metrics table
+├── mfaq_4condition_comparison.csv # All 4 conditions comparison table on MFAQ
 ├── results_table.tex              # Paper-ready LaTeX table export
 ├── human_eval_report.json         # Inter-annotator agreement & Cohen's Kappa report
 ├── evaluation_results/            # Generated high-resolution publication charts
@@ -119,7 +130,8 @@ Evaluated on the English subset of the `clips/mfaq` real-world FAQ corpus to val
 │   ├── per_category_hallucination.png
 │   ├── ablation_study_chart.png
 │   ├── mfaq_retrieval_performance.png
-│   └── mfaq_qa_comparison.png
+│   ├── mfaq_qa_comparison.png
+│   └── mfaq_4condition_comparison.png
 ├── Capstone Project_Proposal.pdf  # Approved capstone project proposal
 └── README.md                      # Project documentation
 ```
