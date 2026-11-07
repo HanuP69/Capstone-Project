@@ -22,6 +22,14 @@ import numpy as np
 import pandas as pd
 import faiss
 import ollama
+try:
+    from rank_bm25 import BM25Okapi
+except ImportError:
+    BM25Okapi = None
+
+def tokenize_text(text: str) -> List[str]:
+    """Tokenize text into lowercase alphanumeric terms for BM25 sparse retrieval."""
+    return [w for w in re.findall(r"\w+", text.lower()) if len(w) > 1]
 
 DEFAULT_GEN_MODEL = "gemma4:e4b"
 DEFAULT_EMB_MODEL = "nomic-embed-text:latest"
@@ -83,6 +91,7 @@ class ClaimVerificationResult:
     policy_explanation: str
     retrieved_contexts: List[str]
     regenerated_claim: Optional[str] = None
+    retrieval_method: str = "hybrid_rrf"
     is_synthetic_benchmark: bool = True
 
 @dataclass
@@ -683,40 +692,150 @@ class PolicyComplianceAgent:
 
 
 class GroundingAgent:
-    """FAISS dense retrieval agent. Flags synthetic context with [Synthetic KB]."""
-    def __init__(self, corpus_docs: List[Dict[str, Any]], llm_client: LLMClient):
+    """
+    Hybrid Retrieval Agent combining Dense Vector Search (FAISS + nomic-embed-text)
+    and Sparse Lexical Search (BM25Okapi) using Reciprocal Rank Fusion (RRF).
+    Flags synthetic context with [Synthetic KB].
+    """
+    def __init__(
+        self,
+        corpus_docs: List[Dict[str, Any]],
+        llm_client: LLMClient,
+        default_mode: str = "hybrid",
+        rrf_k: int = 60,
+        rrf_w_dense: float = 2.0,
+        rrf_w_bm25: float = 1.0
+    ):
         self.corpus_docs = corpus_docs
         self.llm = llm_client
         self.corpus_df = pd.DataFrame(corpus_docs)
-        self._build_index()
+        self.default_mode = default_mode
+        self.rrf_k = rrf_k
+        self.rrf_w_dense = rrf_w_dense
+        self.rrf_w_bm25 = rrf_w_bm25
+        self._build_indices()
 
-    def _build_index(self):
-        texts = [f"{d['title']}: {d['text']}" for d in self.corpus_docs]
-        embeddings = self.llm.embed_texts(texts)
+    def _build_indices(self):
+        # 1. Dense FAISS index
+        self.doc_texts = [f"{d['title']}: {d['text']}" for d in self.corpus_docs]
+        embeddings = self.llm.embed_texts(self.doc_texts)
         norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
         norms[norms == 0] = 1.0
         normalized = embeddings / norms
+        self.dense_embeddings = normalized
         self.index = faiss.IndexFlatIP(normalized.shape[1])
         self.index.add(normalized)
 
-    def retrieve(self, claim: str, k: int = 3) -> List[Dict[str, Any]]:
+        # 2. Sparse BM25 index
+        if BM25Okapi is not None:
+            self.tokenized_corpus = [tokenize_text(t) for t in self.doc_texts]
+            self.bm25 = BM25Okapi(self.tokenized_corpus)
+        else:
+            self.bm25 = None
+
+    def retrieve_dense(self, claim: str, k: int = 3) -> List[Dict[str, Any]]:
         q_emb = self.llm.embed_texts([claim])
         q_norm = np.linalg.norm(q_emb, axis=1, keepdims=True)
         q_norm[q_norm == 0] = 1.0
         q_emb = q_emb / q_norm
 
-        scores, indices = self.index.search(q_emb, k)
+        scores, indices = self.index.search(q_emb, min(k, len(self.corpus_docs)))
         results = []
         for rank, (score, idx) in enumerate(zip(scores[0], indices[0])):
             if 0 <= idx < len(self.corpus_docs):
                 item = self.corpus_docs[idx].copy()
                 item["similarity_score"] = float(score)
+                item["dense_score"] = float(score)
                 item["rank"] = rank + 1
+                item["retrieval_method"] = "dense"
                 results.append(item)
         return results
 
-    def verify(self, claim: str) -> Tuple[float, List[Dict[str, Any]]]:
-        retrieved = self.retrieve(claim, k=3)
+    def retrieve_bm25(self, claim: str, k: int = 3) -> List[Dict[str, Any]]:
+        if self.bm25 is None:
+            return self.retrieve_dense(claim, k=k)
+        q_toks = tokenize_text(claim)
+        if not q_toks:
+            return self.retrieve_dense(claim, k=k)
+        scores = self.bm25.get_scores(q_toks)
+        top_indices = np.argsort(-scores)[:min(k, len(self.corpus_docs))]
+        results = []
+        for rank, idx in enumerate(top_indices):
+            item = self.corpus_docs[idx].copy()
+            item["bm25_score"] = float(scores[idx])
+            item["similarity_score"] = float(min(1.0, max(0.0, scores[idx] / 10.0)))
+            item["rank"] = rank + 1
+            item["retrieval_method"] = "bm25"
+            results.append(item)
+        return results
+
+    def retrieve_hybrid_rrf(
+        self,
+        claim: str,
+        k: int = 3,
+        k_rrf: Optional[int] = None,
+        w_dense: Optional[float] = None,
+        w_bm25: Optional[float] = None
+    ) -> List[Dict[str, Any]]:
+        k_rrf = k_rrf or self.rrf_k
+        w_d = w_dense if w_dense is not None else self.rrf_w_dense
+        w_b = w_bm25 if w_bm25 is not None else self.rrf_w_bm25
+
+        if self.bm25 is None:
+            return self.retrieve_dense(claim, k=k)
+
+        # Dense ranking
+        q_emb = self.llm.embed_texts([claim])
+        q_norm = np.linalg.norm(q_emb, axis=1, keepdims=True)
+        q_norm[q_norm == 0] = 1.0
+        q_emb = q_emb / q_norm
+        dense_scores, dense_indices = self.index.search(q_emb, len(self.corpus_docs))
+
+        # BM25 ranking
+        q_toks = tokenize_text(claim)
+        bm25_scores = self.bm25.get_scores(q_toks) if q_toks else np.zeros(len(self.corpus_docs))
+        bm25_indices = np.argsort(-bm25_scores)
+
+        # Reciprocal Rank Fusion
+        rrf_dict: Dict[int, float] = {}
+        for rank, idx in enumerate(dense_indices[0]):
+            if 0 <= idx < len(self.corpus_docs):
+                rrf_dict[idx] = rrf_dict.get(idx, 0.0) + w_d / (k_rrf + rank + 1)
+
+        for rank, idx in enumerate(bm25_indices):
+            if 0 <= idx < len(self.corpus_docs):
+                rrf_dict[idx] = rrf_dict.get(idx, 0.0) + w_b / (k_rrf + rank + 1)
+
+        sorted_indices = sorted(rrf_dict.keys(), key=lambda i: rrf_dict[i], reverse=True)[:k]
+
+        results = []
+        for rank, idx in enumerate(sorted_indices):
+            item = self.corpus_docs[idx].copy()
+            dense_rank_pos = list(dense_indices[0]).index(idx) if idx in dense_indices[0] else 999
+            dense_score = float(dense_scores[0][dense_rank_pos]) if dense_rank_pos < len(dense_scores[0]) else 0.0
+            bm25_score = float(bm25_scores[idx])
+
+            item["rrf_score"] = float(rrf_dict[idx])
+            item["dense_score"] = dense_score
+            item["bm25_score"] = bm25_score
+            item["similarity_score"] = dense_score  # for compatibility
+            item["rank"] = rank + 1
+            item["retrieval_method"] = "hybrid_rrf"
+            results.append(item)
+
+        return results
+
+    def retrieve(self, claim: str, k: int = 3, mode: Optional[str] = None) -> List[Dict[str, Any]]:
+        mode = (mode or self.default_mode).lower()
+        if mode == "bm25":
+            return self.retrieve_bm25(claim, k=k)
+        elif mode == "dense":
+            return self.retrieve_dense(claim, k=k)
+        else:
+            return self.retrieve_hybrid_rrf(claim, k=k)
+
+    def verify(self, claim: str, mode: Optional[str] = None) -> Tuple[float, List[Dict[str, Any]]]:
+        retrieved = self.retrieve(claim, k=3, mode=mode)
         if not retrieved:
             return 0.0, []
         top_sim = retrieved[0]["similarity_score"]
@@ -791,6 +910,10 @@ class AcademicVerificationPipeline:
         policies: Optional[List[PolicyRule]] = None,
         weights: Optional[Dict[str, float]] = None,
         use_meta_learner: bool = False,
+        retrieval_mode: str = "hybrid",
+        rrf_k: int = 60,
+        rrf_w_dense: float = 2.0,
+        rrf_w_bm25: float = 1.0,
         gen_model: str = DEFAULT_GEN_MODEL,
         emb_model: str = DEFAULT_EMB_MODEL,
         cache_dir: str = "nb_cache"
@@ -798,12 +921,20 @@ class AcademicVerificationPipeline:
         self.docs = docs or SYNTHETIC_NITJ_DOCS
         self.records = records or SYNTHETIC_NITJ_RECORDS
         self.policies = policies or SYNTHETIC_NITJ_POLICIES
+        self.retrieval_mode = retrieval_mode
         self.llm = LLMClient(gen_model=gen_model, emb_model=emb_model, cache_dir=cache_dir)
         
         self.claim_extractor = ClaimExtractor(self.llm)
         self.fact_agent = FactCheckAgent(self.records)
         self.policy_agent = PolicyComplianceAgent(self.policies)
-        self.grounding_agent = GroundingAgent(self.docs, self.llm)
+        self.grounding_agent = GroundingAgent(
+            self.docs,
+            self.llm,
+            default_mode=retrieval_mode,
+            rrf_k=rrf_k,
+            rrf_w_dense=rrf_w_dense,
+            rrf_w_bm25=rrf_w_bm25
+        )
         self.scorer = GroundednessScorer(weights=weights, use_meta_learner=use_meta_learner)
         self.gate = DecisionGate()
         self.regenerator = RegenerationEngine(self.llm)
@@ -822,20 +953,29 @@ class AcademicVerificationPipeline:
             return "Syllabus Queries"
         return "Circulars"
 
-    def verify_single_claim(self, claim: str, claim_id: str = "c0") -> ClaimVerificationResult:
+    def verify_single_claim(
+        self,
+        claim: str,
+        claim_id: str = "c0",
+        retrieval_mode: Optional[str] = None,
+        skip_regeneration: bool = False
+    ) -> ClaimVerificationResult:
         F, f_exp = self.fact_agent.verify(claim)
         P, p_exp = self.policy_agent.verify(claim)
-        D, retrieved = self.grounding_agent.verify(claim)
+        mode = retrieval_mode or self.retrieval_mode
+        D, retrieved = self.grounding_agent.verify(claim, mode=mode)
 
         G = self.scorer.compute_score(F, P, D)
         decision, pred_label = self.gate.decide(F, P, D, G)
         category = self.classify_claim_category(claim)
 
         regen_text = None
-        if decision == "BLOCK":
+        if decision == "BLOCK" and not skip_regeneration:
             ctx = "\n".join([d["text"] for d in retrieved]) if retrieved else ""
             reason = f"Fact-Check: {f_exp} | Policy: {p_exp}"
             regen_text = self.regenerator.regenerate(claim, ctx, reason)
+
+        ret_method = retrieved[0].get("retrieval_method", mode) if retrieved else mode
 
         return ClaimVerificationResult(
             claim_id=claim_id,
@@ -851,6 +991,7 @@ class AcademicVerificationPipeline:
             policy_explanation=p_exp,
             retrieved_contexts=[d["text"] for d in retrieved],
             regenerated_claim=regen_text,
+            retrieval_method=ret_method,
             is_synthetic_benchmark=True
         )
 

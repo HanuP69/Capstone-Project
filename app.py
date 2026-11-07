@@ -76,6 +76,7 @@ class ClaimVerifyRequest(BaseModel):
     claim: str = Field(..., example="The semester registration deadline at NIT Jamshedpur is 15 August 2026.")
     institution: str = Field(default="NITJ", example="NITJ")
     use_meta_learner: bool = Field(default=False, description="Use MLE Logistic Regression derived weights (w1=0.508, w2=0.315, w3=0.177) instead of default heuristic")
+    retrieval_mode: str = Field(default="hybrid", description="Retrieval backend: 'hybrid' (BM25 + Dense RRF), 'dense', or 'bm25'")
 
 class ClaimVerifyResponse(BaseModel):
     claim_id: str
@@ -92,12 +93,14 @@ class ClaimVerifyResponse(BaseModel):
     retrieved_contexts: List[str]
     regenerated_claim: Optional[str] = None
     weighting_mode: str = "default_heuristic"
+    retrieval_method: str = "hybrid_rrf"
     is_synthetic_benchmark: bool = True
 
 class QueryRequest(BaseModel):
     query: str = Field(..., example="What is the semester registration deadline and tuition fee for B.Tech?")
     institution: str = Field(default="NITJ", example="NITJ")
     use_meta_learner: bool = Field(default=False, description="Use MLE Logistic Regression derived weights")
+    retrieval_mode: str = Field(default="hybrid", description="Retrieval backend: 'hybrid', 'dense', or 'bm25'")
 
 class QueryResponse(BaseModel):
     query: str
@@ -128,6 +131,7 @@ def root():
             "audit_trail": "/api/audit-trail",
             "metrics": "/api/metrics",
             "meta_learner": "/api/meta-learner",
+            "retrieval_comparison": "/api/retrieval-comparison",
             "human_eval": "/api/human-eval"
         }
     }
@@ -143,7 +147,7 @@ def verify_claim(req: ClaimVerifyRequest):
     pipeline.scorer.weights = LEARNED_META_WEIGHTS if req.use_meta_learner else DEFAULT_WEIGHTS
 
     try:
-        result = pipeline.verify_single_claim(req.claim)
+        result = pipeline.verify_single_claim(req.claim, retrieval_mode=req.retrieval_mode)
     finally:
         pipeline.scorer.weights = orig_weights
 
@@ -152,6 +156,7 @@ def verify_claim(req: ClaimVerifyRequest):
         "type": "claim",
         "institution": inst,
         "weighting_mode": "meta_learner_mle" if req.use_meta_learner else "default_heuristic",
+        "retrieval_mode": req.retrieval_mode,
         "claim": req.claim,
         "F": result.F_score,
         "P": result.P_score,
@@ -178,6 +183,7 @@ def verify_claim(req: ClaimVerifyRequest):
         retrieved_contexts=result.retrieved_contexts,
         regenerated_claim=result.regenerated_claim,
         weighting_mode="meta_learner_mle" if req.use_meta_learner else "default_heuristic",
+        retrieval_method=result.retrieval_method,
         is_synthetic_benchmark=True
     )
 
@@ -280,6 +286,28 @@ def get_meta_learner():
         df = pd.read_csv("meta_learner_weights_comparison.csv")
         results["comparison_table"] = df.to_dict(orient="records")
     return results
+
+@app.get("/api/retrieval-comparison")
+def get_retrieval_comparison():
+    resp = {
+        "status": "calibrated",
+        "methods": [
+            "1. Sparse Lexical Search (BM25Okapi)",
+            "2. Dense Semantic Vector Search (nomic-embed-text + FAISS)",
+            "3. Hybrid Reciprocal Rank Fusion (RRF)"
+        ],
+        "rrf_parameters": {
+            "standard_k": 60,
+            "calibrated_k": 20,
+            "calibrated_weights": {"w_dense": 2.0, "w_bm25": 1.0}
+        },
+        "formula": "RRF(d) = w_dense / (k + rank_dense(d)) + w_bm25 / (k + rank_bm25(d))",
+        "dataset_mode": "[Synthetic Benchmark]"
+    }
+    if os.path.exists("hybrid_retrieval_comparison.csv"):
+        df_ret = pd.read_csv("hybrid_retrieval_comparison.csv")
+        resp["mfaq_retrieval_benchmark"] = df_ret.to_dict(orient="records")
+    return resp
 
 @app.get("/api/audit-trail")
 def get_audit_trail(limit: int = Query(50, ge=1, le=200)):

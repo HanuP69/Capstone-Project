@@ -1,0 +1,5 @@
+Recall@1,Recall@3,Recall@5,Recall@10,MRR,Method,Latency_ms
+63.2,81.2,86.4,91.2,0.7332,1. Sparse BM25 Only,0.39
+78.0,91.6,94.8,96.8,0.8518,2. Dense Only (FAISS),0.02
+74.8,88.8,92.4,94.8,0.8273,"3. Standard Hybrid RRF (k=60, 1:1)",0.43
+79.2,92.0,94.8,96.4,0.8561,"4. Calibrated Hybrid RRF (k=20, 2:1)",0.44

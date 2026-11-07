@@ -1,0 +1,4 @@
+Retrieval_Backend,Total_Claims,Overall_Accuracy,Missed_Falsehood_Rate,Mean_D_True_Claims,Mean_D_False_Claims,Mean_D_Unverifiable_Claims,Grounding_Separation_Gap
+Dense Search,150,93.33,2.0,0.748,0.685,0.644,0.104
+BM25 Search,150,93.33,2.0,0.354,0.125,0.045,0.309
+Hybrid Search (RRF),150,93.33,2.0,0.752,0.686,0.643,0.109

@@ -1,0 +1,14 @@
+\begin{table}
+\caption{Retrieval Performance Comparison: Sparse BM25 vs Dense vs Reciprocal Rank Fusion (RRF) on MFAQ (250 FAQ Pairs)}
+\label{tab:hybrid_retrieval}
+\begin{tabular}{rrrrrlr}
+\toprule
+Recall@1 & Recall@3 & Recall@5 & Recall@10 & MRR & Method & Latency_ms \\
+\midrule
+63.200000 & 81.200000 & 86.400000 & 91.200000 & 0.733200 & 1. Sparse BM25 Only & 0.390000 \\
+78.000000 & 91.600000 & 94.800000 & 96.800000 & 0.851800 & 2. Dense Only (FAISS) & 0.020000 \\
+74.800000 & 88.800000 & 92.400000 & 94.800000 & 0.827300 & 3. Standard Hybrid RRF (k=60, 1:1) & 0.430000 \\
+79.200000 & 92.000000 & 94.800000 & 96.400000 & 0.856100 & 4. Calibrated Hybrid RRF (k=20, 2:1) & 0.440000 \\
+\bottomrule
+\end{tabular}
+\end{table}
