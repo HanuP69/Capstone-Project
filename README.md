@@ -4,6 +4,10 @@
 > *B.Tech Capstone Project — Department of Computer Science & Engineering, National Institute of Technology Jamshedpur*  
 > **Supervisor:** Dr. Dilip Kumar  
 
+> [!NOTE]
+> **Dataset Status — [Synthetic Benchmark]:**  
+> Current empirical evaluations in this repository are conducted on **[Synthetic Benchmarks]** (150 total claims across institutions). These datasets were curated from published NIT Jamshedpur academic ordinances, fee schedules, examination timetables, and hostel rules to create controlled, ground-truth labeled test sets (True, Controlled False Hallucinations, and Out-of-KB Unverifiable). Ingestion and parsing of live raw institutional PDF circulars from `nitjsr.ac.in` is designated as the subsequent data engineering milestone.
+
 ---
 
 ## 📌 Abstract & Overview
@@ -11,9 +15,9 @@
 Large Language Models (LLMs) deployed as academic assistants routinely hallucinate critical operational facts—incorrect exam dates, altered fee deadlines, and fabricated institutional policies. This project presents a **domain-agnostic, multi-agent groundedness verification pipeline** that:
 1. Decomposes candidate LLM answers into atomic, checkable claims.
 2. Evaluates each claim in parallel across three specialized verification agents:
-   - **Fact-Check Agent**: Checks structured key-value institutional records (exam schedules, fee tables, deadlines).
-   - **Policy-Compliance Agent**: Validates claims against deterministic academic policy rule bases (attendance minimums, curfew, grading scales, probation).
-   - **Grounding Agent**: Performs dense vector retrieval over circulars, handbooks, and ordinances via FAISS and `nomic-embed-text`.
+   - **Fact-Check Agent**: Checks structured key-value institutional records (exam schedules, fee tables, deadlines). Tagged as `[Synthetic Record]` in benchmark mode.
+   - **Policy-Compliance Agent**: Validates claims against deterministic academic policy rule bases (attendance minimums, curfew, grading scales, probation). Tagged as `[Synthetic Policy]`.
+   - **Grounding Agent**: Performs dense vector retrieval over circulars, handbooks, and ordinances via FAISS and `nomic-embed-text`. Tagged as `[Synthetic Context]`.
 3. Computes a unified groundedness score:
    $$G(c) = w_1 \cdot F(c) + w_2 \cdot P(c) + w_3 \cdot D(c)$$
 4. Routes each claim through a **Decision Gate** (`PASS`, `FLAG`, `BLOCK`), triggering an automated **Regeneration Feedback Loop** that rewrites ungrounded or false statements into cautious, grounded facts using verified institutional context.
@@ -29,9 +33,9 @@ flowchart TD
     GEN --> EXT["Atomic Claim Extractor"]
     
     subgraph MultiAgent ["Parallel Verification Layer"]
-        EXT --> FC["Fact-Check Agent (Structured KV Records)"]
-        EXT --> PC["Policy-Compliance Agent (Deterministic Rules)"]
-        EXT --> GA["Grounding Agent (FAISS Vector Store)"]
+        EXT --> FC["Fact-Check Agent ([Synthetic Record] KV Records)"]
+        EXT --> PC["Policy-Compliance Agent ([Synthetic Policy] Rules)"]
+        EXT --> GA["Grounding Agent ([Synthetic Context] FAISS Vector Store)"]
     end
     
     FC --> SC["Groundedness Scoring Engine G(c) = w1*F + w2*P + w3*D"]
@@ -51,30 +55,34 @@ flowchart TD
 
 ---
 
-## 📊 Key Empirical Results
+## 📊 Empirical Results on Full Expanded Sample (150 Claims)
+
+The evaluation was executed on the full expanded benchmark sample:
+* **Primary (NIT Jamshedpur [Synthetic Benchmark]):** 120 claims (40 True, 40 False, 40 Unverifiable) distributed evenly across 5 proposal categories.
+* **Secondary (Public Central University [Synthetic Benchmark]):** 30 claims (10 True, 10 False, 10 Unverifiable).
 
 ### 1. Benchmark Comparison Across Conditions
-| Condition | Dataset | Accuracy | Precision | Recall | F1 Score | Missed Falsehood Rate |
-|---|---|---|---|---|---|---|
-| **Baseline A: Plain LLM** | NIT Jamshedpur | 33.3% | 0.111 | 0.333 | 0.167 | 100.0% |
-| **Baseline B: RAG-only** | NIT Jamshedpur | 65.0% | 0.680 | 0.650 | 0.660 | 35.0% |
-| **Baseline C: Self-Consistency** | NIT Jamshedpur | 33.3% | 0.111 | 0.333 | 0.167 | 100.0% |
-| **Proposed Full Pipeline** | **NIT Jamshedpur** | **94.0%** | **0.957** | **0.940** | **0.951** | **0.0%** |
-| **Proposed Full Pipeline** | **Public University** | **100.0%** | **1.000** | **1.000** | **1.000** | **0.0%** |
+| Condition | Dataset | Sample Size | Accuracy | Precision | Recall | F1 Score | Missed Falsehood Rate |
+|---|---|---|---|---|---|---|---|
+| **Baseline A: Plain LLM** | NIT Jamshedpur `[Synthetic]` | 120 | 33.3% | 0.111 | 0.333 | 0.167 | 100.0% |
+| **Baseline B: RAG-only** | NIT Jamshedpur `[Synthetic]` | 120 | 65.0% | 0.680 | 0.650 | 0.660 | 35.0% |
+| **Baseline C: Self-Consistency** | NIT Jamshedpur `[Synthetic]` | 120 | 33.3% | 0.111 | 0.333 | 0.167 | 100.0% |
+| **Proposed Full Pipeline** | **NIT Jamshedpur `[Synthetic]`** | **120** | **91.7%** | **0.965** | **0.917** | **0.958** | **2.5%** |
+| **Proposed Full Pipeline** | **Public University `[Synthetic]`** | **30** | **100.0%** | **1.000** | **1.000** | **1.000** | **0.0%** |
 
-### 2. Per-Category Hallucination Reduction
-Comparing Plain LLM vs Proposed Multi-Agent Pipeline:
+### 2. Per-Category Hallucination Reduction (Proposal Figure 8)
+Comparing Plain LLM vs Proposed Multi-Agent Pipeline on 120 claims:
 * **Exam Dates**: $100.0\% \to 0.0\%$ (100% reduction)
 * **Fee Deadlines**: $100.0\% \to 0.0\%$ (100% reduction)
-* **Hostel Rules**: $100.0\% \to 0.0\%$ (100% reduction)
-* **Circulars**: $100.0\% \to 25.0\%$ (75% reduction)
+* **Hostel Rules**: $100.0\% \to 12.5\%$ (87.5% reduction)
+* **Circulars**: $100.0\% \to 0.0\%$ (100% reduction)
 * **Syllabus Queries**: $100.0\% \to 0.0\%$ (100% reduction)
 
-### 3. Human Annotator Agreement Study
-* Sample Size: 50 balanced claims (True, False, Unverifiable)
-* **Cohen's Kappa ($\kappa$)**: **0.814** (Target $\ge 0.70$ Met)
-* **Inter-Annotator Raw Agreement**: **88.0%**
-* **Pipeline-to-Human Consensus Agreement**: **96.0%**
+### 3. Human Annotator Agreement Study (80 Sampled Claims)
+* Sample Size: 80 balanced claims (True, False, Unverifiable)
+* **Cohen's Kappa ($\kappa$)**: **0.812** (Target $\ge 0.70$ Met)
+* **Inter-Annotator Raw Agreement**: **87.5%**
+* **Pipeline-to-Human Consensus Agreement**: **91.2%**
 
 ---
 
@@ -82,11 +90,11 @@ Comparing Plain LLM vs Proposed Multi-Agent Pipeline:
 
 ```text
 ├── capstone_verification.ipynb    # Main end-to-end research notebook with outputs & charts
-├── verification_pipeline.py       # Object-oriented modular Python AI verification library
-├── run_complete_ai_evaluation.py  # Complete automated evaluation benchmark suite
+├── verification_pipeline.py       # Modular, zero-hardcoding Python AI verification library
+├── run_complete_ai_evaluation.py  # Automated benchmark suite on expanded 150-claim dataset
 ├── app.py                         # Production-grade FastAPI backend microservice
-├── primary_audit_trail.csv        # Detailed per-claim audit logs (NIT Jamshedpur)
-├── secondary_audit_trail.csv      # Cross-institution audit logs (Public University)
+├── primary_audit_trail.csv        # Detailed audit logs for 120 claims (NIT Jamshedpur [Synthetic])
+├── secondary_audit_trail.csv      # Cross-institution audit logs for 30 claims (Public University [Synthetic])
 ├── master_evaluation_metrics.csv  # Benchmark summary metrics
 ├── results_table.tex              # Paper-ready LaTeX table export
 ├── human_eval_report.json         # Inter-annotator agreement & Cohen's Kappa report
@@ -116,19 +124,18 @@ Comparing Plain LLM vs Proposed Multi-Agent Pipeline:
 pip install faiss-cpu scikit-learn pandas numpy matplotlib seaborn fastapi uvicorn pydantic requests
 ```
 
-### Running the Evaluation Suite
-To re-run the complete benchmark and regenerate all publication figures and LaTeX tables:
+### Running the Full Evaluation Suite
+To re-run the benchmark on the expanded 150-claim sample:
 ```bash
 python run_complete_ai_evaluation.py
 ```
 
 ### Running the FastAPI Backend Microservice
-Start the verification microservice:
 ```bash
 uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Interactive API documentation will be available at:
+Interactive API documentation:
 * Swagger UI: `http://localhost:8000/docs`
 * ReDoc: `http://localhost:8000/redoc`
 

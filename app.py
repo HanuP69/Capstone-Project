@@ -4,6 +4,8 @@ FastAPI Backend Microservice for Academic Groundedness Verification
 Per Capstone Proposal Section 9:
 "Backend: FastAPI, MongoDB (claim logs, scores, audit trail)"
 Primary responsibility: Ankit Sharma (Backend API & Verification Agents)
+
+NOTE: Operating on [Synthetic Benchmark] datasets derived from institutional rules.
 """
 
 import os
@@ -17,12 +19,12 @@ from pydantic import BaseModel, Field
 
 from verification_pipeline import (
     AcademicVerificationPipeline,
-    NITJ_DOCS, NITJ_STRUCTURED_RECORDS, NITJ_POLICY_RULES,
-    PUBLIC_UNIV_DOCS, PUBLIC_UNIV_STRUCTURED_RECORDS, PUBLIC_UNIV_POLICY_RULES
+    SYNTHETIC_NITJ_DOCS, SYNTHETIC_NITJ_RECORDS, SYNTHETIC_NITJ_POLICIES,
+    SYNTHETIC_PUBLIC_DOCS, SYNTHETIC_PUBLIC_RECORDS, SYNTHETIC_PUBLIC_POLICIES
 )
 
 app = FastAPI(
-    title="Institutional Academic Assistant Verification API",
+    title="Institutional Academic Assistant Verification API [Synthetic Benchmark]",
     description="Multi-Agent Groundedness Verification Pipeline (NIT Jamshedpur & Cross-Institution Benchmark)",
     version="1.0.0"
 )
@@ -35,21 +37,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pipelines initialized in memory
+# Pipelines initialized in memory using synthetic benchmark schemas
 pipelines = {
     "NITJ": AcademicVerificationPipeline(
-        docs=NITJ_DOCS,
-        records=NITJ_STRUCTURED_RECORDS,
-        policies=NITJ_POLICY_RULES
+        docs=SYNTHETIC_NITJ_DOCS,
+        records=SYNTHETIC_NITJ_RECORDS,
+        policies=SYNTHETIC_NITJ_POLICIES
     ),
     "PUBLIC": AcademicVerificationPipeline(
-        docs=PUBLIC_UNIV_DOCS,
-        records=PUBLIC_UNIV_STRUCTURED_RECORDS,
-        policies=PUBLIC_UNIV_POLICY_RULES
+        docs=SYNTHETIC_PUBLIC_DOCS,
+        records=SYNTHETIC_PUBLIC_RECORDS,
+        policies=SYNTHETIC_PUBLIC_POLICIES
     )
 }
 
-# In-memory audit trail log
 AUDIT_LOGS_FILE = "api_audit_log.json"
 audit_logs = []
 if os.path.exists(AUDIT_LOGS_FILE):
@@ -88,6 +89,7 @@ class ClaimVerifyResponse(BaseModel):
     policy_explanation: str
     retrieved_contexts: List[str]
     regenerated_claim: Optional[str] = None
+    is_synthetic_benchmark: bool = True
 
 class QueryRequest(BaseModel):
     query: str = Field(..., example="What is the semester registration deadline and tuition fee for B.Tech?")
@@ -104,6 +106,7 @@ class QueryResponse(BaseModel):
     blocked_claims: int
     latency_seconds: float
     claims: List[ClaimVerifyResponse]
+    dataset_mode: str = "[Synthetic Benchmark]"
 
 # ============================================================================
 # API Endpoints
@@ -113,6 +116,7 @@ def root():
     return {
         "status": "online",
         "service": "Institutional Groundedness Verification Engine",
+        "dataset_mode": "[Synthetic Benchmark] (Derived from institutional ordinances)",
         "supported_institutions": ["NITJ", "PUBLIC"],
         "endpoints": {
             "verify_claim": "/api/verify-claim",
@@ -142,7 +146,8 @@ def verify_claim(req: ClaimVerifyRequest):
         "D": result.D_score,
         "G": result.G_score,
         "decision": result.decision,
-        "pred": result.predicted_label
+        "pred": result.predicted_label,
+        "dataset_mode": "[Synthetic Benchmark]"
     }
     save_audit(log_item)
 
@@ -159,7 +164,8 @@ def verify_claim(req: ClaimVerifyRequest):
         fact_explanation=result.fact_explanation,
         policy_explanation=result.policy_explanation,
         retrieved_contexts=result.retrieved_contexts,
-        regenerated_claim=result.regenerated_claim
+        regenerated_claim=result.regenerated_claim,
+        is_synthetic_benchmark=True
     )
 
 @app.post("/api/verify-query", response_model=QueryResponse)
@@ -179,7 +185,8 @@ def verify_query(req: QueryRequest):
         "claims_total": resp.total_claims,
         "passed": resp.passed_claims,
         "blocked": resp.blocked_claims,
-        "latency": resp.latency_seconds
+        "latency": resp.latency_seconds,
+        "dataset_mode": "[Synthetic Benchmark]"
     }
     save_audit(log_item)
 
@@ -197,7 +204,8 @@ def verify_query(req: QueryRequest):
             fact_explanation=c.fact_explanation,
             policy_explanation=c.policy_explanation,
             retrieved_contexts=c.retrieved_contexts,
-            regenerated_claim=c.regenerated_claim
+            regenerated_claim=c.regenerated_claim,
+            is_synthetic_benchmark=True
         ) for c in resp.claims
     ]
 
@@ -211,7 +219,8 @@ def verify_query(req: QueryRequest):
         flagged_claims=resp.flagged_claims,
         blocked_claims=resp.blocked_claims,
         latency_seconds=resp.latency_seconds,
-        claims=claim_responses
+        claims=claim_responses,
+        dataset_mode="[Synthetic Benchmark]"
     )
 
 @app.get("/api/audit-trail")
@@ -219,19 +228,21 @@ def get_audit_trail(limit: int = Query(50, ge=1, le=200)):
     if os.path.exists("primary_audit_trail.csv"):
         df = pd.read_csv("primary_audit_trail.csv")
         records = df.head(limit).to_dict(orient="records")
-        return {"total_records": len(df), "returned": len(records), "data": records}
-    return {"total_records": len(audit_logs), "data": audit_logs[-limit:]}
+        return {"total_records": len(df), "returned": len(records), "dataset_mode": "[Synthetic Benchmark]", "data": records}
+    return {"total_records": len(audit_logs), "dataset_mode": "[Synthetic Benchmark]", "data": audit_logs[-limit:]}
 
 @app.get("/api/metrics")
 def get_metrics():
     if os.path.exists("master_evaluation_metrics.csv"):
         df = pd.read_csv("master_evaluation_metrics.csv")
-        return {"metrics": df.to_dict(orient="records")}
-    return {"error": "Metrics table not found. Run evaluation first."}
+        return {"dataset_mode": "[Synthetic Benchmark]", "metrics": df.to_dict(orient="records")}
+    return {"error": "Metrics table not found."}
 
 @app.get("/api/human-eval")
 def get_human_eval():
     if os.path.exists("human_eval_report.json"):
         with open("human_eval_report.json", "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            data["dataset_mode"] = "[Synthetic Benchmark]"
+            return data
     return {"error": "Human evaluation report not found."}
