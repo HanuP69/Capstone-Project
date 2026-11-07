@@ -1,0 +1,8 @@
+Benchmark,Sample_Size,Metric,Score,Unit
+MFAQ Dense Retrieval,250,Recall@1,78.0,%
+MFAQ Dense Retrieval,250,Recall@3,91.6,%
+MFAQ Dense Retrieval,250,Recall@5,94.8,%
+MFAQ Dense Retrieval,250,Recall@10,96.8,%
+MFAQ Dense Retrieval,250,MRR,0.851,"scale [0,1]"
+MFAQ QA Answering,30,Plain LLM Token-F1,0.176,"scale [0,1]"
+MFAQ QA Answering,30,RAG Token-F1,0.566,"scale [0,1]"

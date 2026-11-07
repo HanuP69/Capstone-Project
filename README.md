@@ -84,6 +84,19 @@ Comparing Plain LLM vs Proposed Multi-Agent Pipeline on 120 claims:
 * **Inter-Annotator Raw Agreement**: **87.5%**
 * **Pipeline-to-Human Consensus Agreement**: **91.2%**
 
+### 4. Real-World Retrieval & QA Stress-Test: MFAQ Benchmark (Full Run: 250 FAQ Pairs)
+Evaluated on the English subset of the `clips/mfaq` real-world FAQ corpus to validate the dense RAG layer (`nomic-embed-text` + FAISS):
+* **Dense Retrieval Layer (250 Real-World FAQ Pairs)**:
+  * **Recall@1**: **78.0%**
+  * **Recall@3**: **91.6%**
+  * **Recall@5**: **94.8%**
+  * **Recall@10**: **96.8%**
+  * **Mean Reciprocal Rank (MRR)**: **0.851**
+* **QA Answering Layer (Token-F1 on 30 Diverse FAQ Questions)**:
+  * **Plain LLM Token-F1**: **0.176**
+  * **RAG-Augmented Token-F1**: **0.566**
+  * **Relative Improvement**: **+221.5%** over ungrounded generation.
+
 ---
 
 ## 🛠️ Repository Structure
@@ -92,17 +105,21 @@ Comparing Plain LLM vs Proposed Multi-Agent Pipeline on 120 claims:
 ├── capstone_verification.ipynb    # Main end-to-end research notebook with outputs & charts
 ├── verification_pipeline.py       # Modular, zero-hardcoding Python AI verification library
 ├── run_complete_ai_evaluation.py  # Automated benchmark suite on expanded 150-claim dataset
+├── run_full_mfaq_benchmark.py     # Full MFAQ retrieval & QA evaluation runner (250 pairs)
 ├── app.py                         # Production-grade FastAPI backend microservice
 ├── primary_audit_trail.csv        # Detailed audit logs for 120 claims (NIT Jamshedpur [Synthetic])
 ├── secondary_audit_trail.csv      # Cross-institution audit logs for 30 claims (Public University [Synthetic])
 ├── master_evaluation_metrics.csv  # Benchmark summary metrics
+├── mfaq_benchmark_results.csv     # Full MFAQ retrieval & QA metrics table
 ├── results_table.tex              # Paper-ready LaTeX table export
 ├── human_eval_report.json         # Inter-annotator agreement & Cohen's Kappa report
 ├── evaluation_results/            # Generated high-resolution publication charts
 │   ├── roc_curve_comparison.png
 │   ├── confusion_matrix_groundedness.png
 │   ├── per_category_hallucination.png
-│   └── ablation_study_chart.png
+│   ├── ablation_study_chart.png
+│   ├── mfaq_retrieval_performance.png
+│   └── mfaq_qa_comparison.png
 ├── Capstone Project_Proposal.pdf  # Approved capstone project proposal
 └── README.md                      # Project documentation
 ```
