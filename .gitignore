@@ -37,3 +37,13 @@ Thumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 *.log
+
+# Dashboard local dependencies, generated data, and build output
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.env
+dashboard/public/data/*.json
+dashboard/public/data/figures/*.png
+.work/
+node_modules/
+dist/
