@@ -782,6 +782,13 @@ class GroundingAgent:
         self._build_indices()
 
     def _build_indices(self):
+        if not self.corpus_docs:
+            self.doc_texts = []
+            self.dense_embeddings = None
+            self.index = None
+            self.bm25 = None
+            return
+
         # 1. Dense FAISS index (in-memory fallback or primary when ChromaDB not specified)
         self.doc_texts = [f"{d['title']}: {d['text']}" for d in self.corpus_docs]
         embeddings = self.llm.embed_texts(self.doc_texts)
@@ -807,9 +814,10 @@ class GroundingAgent:
 
         # Prefer persistent ChromaDB vector store if active
         if self.chroma_collection is not None:
+            c_count = self.chroma_collection.count()
             query_kwargs = {
                 "query_embeddings": q_emb.tolist(),
-                "n_results": min(k, len(self.corpus_docs))
+                "n_results": min(k, c_count) if c_count > 0 else k
             }
             if where:
                 query_kwargs["where"] = where

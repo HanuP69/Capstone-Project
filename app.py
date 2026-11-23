@@ -15,6 +15,8 @@ from typing import List, Dict, Any, Optional
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from verification_pipeline import (
@@ -125,17 +127,34 @@ class QueryResponse(BaseModel):
     claims: List[ClaimVerifyResponse]
     dataset_mode: str = "[Synthetic Benchmark]"
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FIG_DIR = os.path.join(BASE_DIR, "evaluation_results")
+if os.path.exists(FIG_DIR):
+    app.mount("/evaluation_results", StaticFiles(directory=FIG_DIR), name="evaluation_results")
+
+DASHBOARD_FILE = os.path.join(BASE_DIR, "dashboard.html")
+
 # ============================================================================
 # API Endpoints
 # ============================================================================
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
+@app.get("/dashboard", response_class=HTMLResponse)
+def serve_dashboard():
+    if os.path.exists(DASHBOARD_FILE):
+        with open(DASHBOARD_FILE, "r", encoding="utf-8") as f:
+            return f.read()
+    return "<h1>Academic Verification Dashboard</h1><p>Visit /docs for API documentation.</p>"
+
+@app.get("/api/info")
 def root():
     return {
         "status": "online",
         "service": "Institutional Groundedness Verification Engine",
-        "dataset_mode": "[Synthetic Benchmark] (Derived from institutional ordinances)",
-        "supported_institutions": ["NITJ", "PUBLIC"],
+        "vector_database": "ChromaDB (HNSW Cosine Space, 1,585 vectors)",
+        "supported_institutions": ["NITJ_REAL", "NITJ", "PUBLIC"],
         "endpoints": {
+            "dashboard": "/",
+            "swagger_docs": "/docs",
             "verify_claim": "/api/verify-claim",
             "verify_query": "/api/verify-query",
             "audit_trail": "/api/audit-trail",
@@ -151,7 +170,7 @@ def root():
 def verify_claim(req: ClaimVerifyRequest):
     inst = req.institution.upper()
     if inst not in pipelines:
-        raise HTTPException(status_code=400, detail=f"Institution '{req.institution}' not supported. Use 'NITJ' or 'PUBLIC'.")
+        raise HTTPException(status_code=400, detail=f"Institution '{req.institution}' not supported. Use 'NITJ_REAL', 'NITJ', or 'PUBLIC'.")
     pipeline = pipelines[inst]
 
     orig_weights = pipeline.scorer.weights
