@@ -38,7 +38,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pipelines initialized in memory using synthetic benchmark schemas
+# Pipelines initialized in memory using synthetic benchmark schemas and real ChromaDB
 pipelines = {
     "NITJ": AcademicVerificationPipeline(
         docs=SYNTHETIC_NITJ_DOCS,
@@ -51,6 +51,16 @@ pipelines = {
         policies=SYNTHETIC_PUBLIC_POLICIES
     )
 }
+
+CHROMA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nitjsr_chroma_db")
+if os.path.exists(CHROMA_DIR):
+    pipelines["NITJ_REAL"] = AcademicVerificationPipeline(
+        docs=[],
+        records=[],
+        chroma_dir=CHROMA_DIR,
+        chroma_collection_name="nitjsr_knowledge_base",
+        use_meta_learner=True
+    )
 
 AUDIT_LOGS_FILE = "api_audit_log.json"
 audit_logs = []

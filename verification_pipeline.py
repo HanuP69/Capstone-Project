@@ -746,9 +746,9 @@ class PolicyComplianceAgent:
 
 class GroundingAgent:
     """
-    Hybrid Retrieval Agent combining Dense Vector Search (FAISS + nomic-embed-text)
+    Hybrid Retrieval Agent combining Dense Vector Search (ChromaDB / FAISS + nomic-embed-text)
     and Sparse Lexical Search (BM25Okapi) using Reciprocal Rank Fusion (RRF).
-    Flags synthetic context with [Synthetic KB].
+    Flags synthetic context with [Synthetic KB]. Supports persistent ChromaDB collections.
     """
     def __init__(
         self,
@@ -757,7 +757,9 @@ class GroundingAgent:
         default_mode: str = "hybrid",
         rrf_k: int = 60,
         rrf_w_dense: float = 2.0,
-        rrf_w_bm25: float = 1.0
+        rrf_w_bm25: float = 1.0,
+        chroma_dir: Optional[str] = None,
+        chroma_collection_name: str = "nitjsr_knowledge_base"
     ):
         self.corpus_docs = corpus_docs
         self.llm = llm_client
@@ -766,10 +768,21 @@ class GroundingAgent:
         self.rrf_k = rrf_k
         self.rrf_w_dense = rrf_w_dense
         self.rrf_w_bm25 = rrf_w_bm25
+        self.chroma_dir = chroma_dir
+        self.chroma_collection = None
+
+        if chroma_dir and os.path.exists(chroma_dir):
+            try:
+                import chromadb
+                client = chromadb.PersistentClient(path=chroma_dir)
+                self.chroma_collection = client.get_collection(name=chroma_collection_name)
+            except Exception:
+                self.chroma_collection = None
+
         self._build_indices()
 
     def _build_indices(self):
-        # 1. Dense FAISS index
+        # 1. Dense FAISS index (in-memory fallback or primary when ChromaDB not specified)
         self.doc_texts = [f"{d['title']}: {d['text']}" for d in self.corpus_docs]
         embeddings = self.llm.embed_texts(self.doc_texts)
         norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
@@ -786,12 +799,40 @@ class GroundingAgent:
         else:
             self.bm25 = None
 
-    def retrieve_dense(self, claim: str, k: int = 3) -> List[Dict[str, Any]]:
+    def retrieve_dense(self, claim: str, k: int = 3, where: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         q_emb = self.llm.embed_texts([claim])
         q_norm = np.linalg.norm(q_emb, axis=1, keepdims=True)
         q_norm[q_norm == 0] = 1.0
         q_emb = q_emb / q_norm
 
+        # Prefer persistent ChromaDB vector store if active
+        if self.chroma_collection is not None:
+            query_kwargs = {
+                "query_embeddings": q_emb.tolist(),
+                "n_results": min(k, len(self.corpus_docs))
+            }
+            if where:
+                query_kwargs["where"] = where
+            res = self.chroma_collection.query(**query_kwargs)
+            results = []
+            doc_id_map = {d["id"]: d for d in self.corpus_docs}
+            for rank in range(len(res["ids"][0])):
+                cid = res["ids"][0][rank]
+                dist = res["distances"][0][rank] if "distances" in res and res["distances"] else 0.5
+                sim = max(0.0, min(1.0, 1.0 - dist))
+                item = doc_id_map.get(cid, {
+                    "id": cid,
+                    "text": res["documents"][0][rank],
+                    "title": res["metadatas"][0][rank].get("doc_name", cid) if res["metadatas"] else cid
+                }).copy()
+                item["similarity_score"] = float(sim)
+                item["dense_score"] = float(sim)
+                item["rank"] = rank + 1
+                item["retrieval_method"] = "chroma_dense"
+                results.append(item)
+            return results
+
+        # In-memory FAISS fallback
         scores, indices = self.index.search(q_emb, min(k, len(self.corpus_docs)))
         results = []
         for rank, (score, idx) in enumerate(zip(scores[0], indices[0])):
@@ -828,32 +869,53 @@ class GroundingAgent:
         k: int = 3,
         k_rrf: Optional[int] = None,
         w_dense: Optional[float] = None,
-        w_bm25: Optional[float] = None
+        w_bm25: Optional[float] = None,
+        where: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         k_rrf = k_rrf or self.rrf_k
         w_d = w_dense if w_dense is not None else self.rrf_w_dense
         w_b = w_bm25 if w_bm25 is not None else self.rrf_w_bm25
 
         if self.bm25 is None:
-            return self.retrieve_dense(claim, k=k)
+            return self.retrieve_dense(claim, k=k, where=where)
 
         # Dense ranking
         q_emb = self.llm.embed_texts([claim])
         q_norm = np.linalg.norm(q_emb, axis=1, keepdims=True)
         q_norm[q_norm == 0] = 1.0
         q_emb = q_emb / q_norm
-        dense_scores, dense_indices = self.index.search(q_emb, len(self.corpus_docs))
+
+        rrf_dict: Dict[int, float] = {}
+        dense_scores_map: Dict[int, float] = {}
+        doc_id_to_idx = {d["id"]: idx for idx, d in enumerate(self.corpus_docs)}
+
+        # ChromaDB dense ranking if persistent collection is active
+        if self.chroma_collection is not None:
+            q_kwargs = {
+                "query_embeddings": q_emb.tolist(),
+                "n_results": len(self.corpus_docs)
+            }
+            if where:
+                q_kwargs["where"] = where
+            chroma_res = self.chroma_collection.query(**q_kwargs)
+            for rank, cid in enumerate(chroma_res["ids"][0]):
+                if cid in doc_id_to_idx:
+                    idx = doc_id_to_idx[cid]
+                    dist = chroma_res["distances"][0][rank]
+                    sim = max(0.0, min(1.0, 1.0 - dist))
+                    dense_scores_map[idx] = sim
+                    rrf_dict[idx] = rrf_dict.get(idx, 0.0) + w_d / (k_rrf + rank + 1)
+        else:
+            dense_scores, dense_indices = self.index.search(q_emb, len(self.corpus_docs))
+            for rank, idx in enumerate(dense_indices[0]):
+                if 0 <= idx < len(self.corpus_docs):
+                    dense_scores_map[idx] = float(dense_scores[0][rank])
+                    rrf_dict[idx] = rrf_dict.get(idx, 0.0) + w_d / (k_rrf + rank + 1)
 
         # BM25 ranking
         q_toks = tokenize_text(claim)
         bm25_scores = self.bm25.get_scores(q_toks) if q_toks else np.zeros(len(self.corpus_docs))
         bm25_indices = np.argsort(-bm25_scores)
-
-        # Reciprocal Rank Fusion
-        rrf_dict: Dict[int, float] = {}
-        for rank, idx in enumerate(dense_indices[0]):
-            if 0 <= idx < len(self.corpus_docs):
-                rrf_dict[idx] = rrf_dict.get(idx, 0.0) + w_d / (k_rrf + rank + 1)
 
         for rank, idx in enumerate(bm25_indices):
             if 0 <= idx < len(self.corpus_docs):
@@ -864,8 +926,7 @@ class GroundingAgent:
         results = []
         for rank, idx in enumerate(sorted_indices):
             item = self.corpus_docs[idx].copy()
-            dense_rank_pos = list(dense_indices[0]).index(idx) if idx in dense_indices[0] else 999
-            dense_score = float(dense_scores[0][dense_rank_pos]) if dense_rank_pos < len(dense_scores[0]) else 0.0
+            dense_score = dense_scores_map.get(idx, 0.0)
             bm25_score = float(bm25_scores[idx])
 
             item["rrf_score"] = float(rrf_dict[idx])
@@ -873,22 +934,22 @@ class GroundingAgent:
             item["bm25_score"] = bm25_score
             item["similarity_score"] = dense_score  # for compatibility
             item["rank"] = rank + 1
-            item["retrieval_method"] = "hybrid_rrf"
+            item["retrieval_method"] = "chroma_hybrid_rrf" if self.chroma_collection else "hybrid_rrf"
             results.append(item)
 
         return results
 
-    def retrieve(self, claim: str, k: int = 3, mode: Optional[str] = None) -> List[Dict[str, Any]]:
+    def retrieve(self, claim: str, k: int = 3, mode: Optional[str] = None, where: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         mode = (mode or self.default_mode).lower()
         if mode == "bm25":
             return self.retrieve_bm25(claim, k=k)
         elif mode == "dense":
-            return self.retrieve_dense(claim, k=k)
+            return self.retrieve_dense(claim, k=k, where=where)
         else:
-            return self.retrieve_hybrid_rrf(claim, k=k)
+            return self.retrieve_hybrid_rrf(claim, k=k, where=where)
 
-    def verify(self, claim: str, mode: Optional[str] = None) -> Tuple[float, List[Dict[str, Any]]]:
-        retrieved = self.retrieve(claim, k=3, mode=mode)
+    def verify(self, claim: str, mode: Optional[str] = None, where: Optional[Dict[str, Any]] = None) -> Tuple[float, List[Dict[str, Any]]]:
+        retrieved = self.retrieve(claim, k=3, mode=mode, where=where)
         if not retrieved:
             return 0.0, []
         top_sim = retrieved[0]["similarity_score"]
@@ -978,6 +1039,8 @@ class AcademicVerificationPipeline:
         rrf_k: int = 60,
         rrf_w_dense: float = 2.0,
         rrf_w_bm25: float = 1.0,
+        chroma_dir: Optional[str] = None,
+        chroma_collection_name: str = "nitjsr_knowledge_base",
         gen_model: str = DEFAULT_GEN_MODEL,
         emb_model: str = DEFAULT_EMB_MODEL,
         cache_dir: str = "nb_cache"
@@ -986,6 +1049,7 @@ class AcademicVerificationPipeline:
         self.records = records if records is not None else SYNTHETIC_NITJ_RECORDS
         self.policies = policies if policies is not None else SYNTHETIC_NITJ_POLICIES
         self.retrieval_mode = retrieval_mode
+        self.chroma_dir = chroma_dir
         self.llm = LLMClient(gen_model=gen_model, emb_model=emb_model, cache_dir=cache_dir)
         
         self.claim_extractor = ClaimExtractor(self.llm)
@@ -997,7 +1061,9 @@ class AcademicVerificationPipeline:
             default_mode=retrieval_mode,
             rrf_k=rrf_k,
             rrf_w_dense=rrf_w_dense,
-            rrf_w_bm25=rrf_w_bm25
+            rrf_w_bm25=rrf_w_bm25,
+            chroma_dir=chroma_dir,
+            chroma_collection_name=chroma_collection_name
         )
         self.scorer = GroundednessScorer(weights=weights, use_meta_learner=use_meta_learner)
         self.gate = DecisionGate()
@@ -1022,12 +1088,13 @@ class AcademicVerificationPipeline:
         claim: str,
         claim_id: str = "c0",
         retrieval_mode: Optional[str] = None,
-        skip_regeneration: bool = False
+        skip_regeneration: bool = False,
+        where: Optional[Dict[str, Any]] = None
     ) -> ClaimVerificationResult:
         F, f_exp = self.fact_agent.verify(claim)
         P, p_exp = self.policy_agent.verify(claim)
         mode = retrieval_mode or self.retrieval_mode
-        D, retrieved = self.grounding_agent.verify(claim, mode=mode)
+        D, retrieved = self.grounding_agent.verify(claim, mode=mode, where=where)
 
         G = self.scorer.compute_score(F, P, D)
         decision, pred_label = self.gate.decide(F, P, D, G)

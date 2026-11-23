@@ -98,11 +98,14 @@ syll_chunks = [d for d in corpus_docs if d["category"] == "Syllabus Queries"][:3
 sample_corpus = list({d["id"]: d for d in (table_chunks[:500] + hostel_chunks + fee_chunks + exam_chunks + circ_chunks + syll_chunks)}.values())
 print(f"Selected {len(sample_corpus)} high-yield core institutional chunks for evaluation index.")
 
-# Build AcademicVerificationPipeline with Hybrid Grounding Agent (Dense FAISS + BM25Okapi + RRF)
+# Build AcademicVerificationPipeline with Hybrid Grounding Agent backed by Persistent ChromaDB Vector Store
+CHROMA_DIR = os.path.join(BASE_DIR, "nitjsr_chroma_db")
 real_nitj_pipeline = AcademicVerificationPipeline(
     docs=sample_corpus,
     records=[],
     retrieval_mode="hybrid",
+    chroma_dir=CHROMA_DIR,
+    chroma_collection_name="nitjsr_knowledge_base",
     use_meta_learner=True
 )
 

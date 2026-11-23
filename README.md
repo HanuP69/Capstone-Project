@@ -173,6 +173,10 @@ To validate the multi-agent verification pipeline under real uncurated operation
   * **6,094 Structured Markdown Tables:** Extracted via PyMuPDF coordinate grid boundary detection (`find_tables()`), preserving fee breakdowns, grade matrices, and timetable slots without row slicing.
   * **12,759 Narrative Prose Chunks:** 400-word sliding windows with 50-word overlap, respecting sentence boundaries.
   * **Temporal Metadata:** Regular expression extraction of official reference numbers (`NITJSR/ACD/...`), issue dates (`DD-MM-YYYY`), and academic sessions (`2023-2024`, `2024-2025`).
+* **Persistent Vector Database (ChromaDB):**
+  * Persistent storage directory: `./nitjsr_chroma_db` (HNSW Cosine Space).
+  * Ingested **1,585 high-yield institutional chunks and Markdown tables** with 768-dimensional `nomic-embed-text` embeddings.
+  * Relational metadata filtering (`where={"category": "Fee Deadlines", "chunk_type": "table"}`) for domain-level candidate pruning before Reciprocal Rank Fusion.
 * **Live System Context Grounding:** Dynamic system prompt injection of current wall-clock date (`Monday, 23 November 2026`) and active semester session (`2026-2027 Autumn Semester`), paired with a temporal decay kernel to supersede stale circulars.
 
 ### 2. Dual Evaluation Architecture
@@ -213,7 +217,9 @@ Because human gold labels do not exist for thousands of raw PDFs, we deployed a 
 
 ```text
 ├── capstone_verification.ipynb    # Main end-to-end research notebook (Section 32: NITJSR Case Study)
-├── verification_pipeline.py       # Modular AI verification library (Hybrid BM25+FAISS+RRF + Meta-Learner)
+├── verification_pipeline.py       # Modular AI verification library (ChromaDB + BM25 + FAISS + RRF)
+├── build_chroma_db.py             # ChromaDB persistent vector database builder & metadata indexer
+├── nitjsr_chroma_db/              # Persistent ChromaDB Vector Store (HNSW Cosine 768-dim)
 ├── nitjsr_ingestion_engine.py     # Structure-aware PyMuPDF table extraction & SQLite ingestion engine
 ├── run_nitjsr_case_study.py       # Real NITJSR corpus benchmark runner (Dual Evaluation: Supervised + Triad)
 ├── scan_documents_metadata.py     # Corpus scanner auditing 2,241 PDFs (digital text vs scanned image)
