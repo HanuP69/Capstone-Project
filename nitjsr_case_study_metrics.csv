@@ -1,0 +1,5 @@
+Condition,Accuracy,Precision,Recall,Macro_F1,Missed_Falsehood_Rate
+Baseline A: Plain LLM (Ungrounded),40.0,0.4,1.0,0.571,100.0
+Baseline B: Standard Dense RAG,69.0,0.563,1.0,0.721,77.5
+Baseline C: Self-Consistency (T=3),60.0,0.5,1.0,0.667,100.0
+Proposed: Multi-Agent Pipeline (Ours),91.0,0.867,0.975,0.918,12.5

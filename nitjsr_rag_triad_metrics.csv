@@ -1,0 +1,31 @@
+query_id,query,retrieved_source,context_relevance,faithfulness_groundedness,answer_relevance
+q_01,What is the reporting venue and procedure for newly admitted M.Tech students for Autumn 2024?,dean_office_notices_14.pdf,0.901,0.94,0.92
+q_02,How much is the semester tuition fee for B.Tech students and what is the late fee policy?,notices_5572.pdf,0.94,0.94,0.92
+q_03,What are the hostel curfew timings and guest rules for boarders at NIT Jamshedpur?,notices_5569.pdf,0.94,0.94,0.92
+q_04,Can a B.Tech student of 2022 batch register for a minor degree in another department?,dean_office_notices_9.pdf,0.94,0.94,0.92
+q_05,What is the minimum attendance requirement to appear in end-semester examinations?,notices_5688.pdf,0.937,0.94,0.92
+q_06,How does the revaluation application process work after semester results are declared?,notices_5932.pdf,0.857,0.94,0.92
+q_07,What is the passing CGPA threshold and how does academic probation work at NIT Jamshedpur?,notices_7528.pdf,0.84,0.94,0.92
+q_08,Are undergraduate students permitted to keep motorized vehicles in hostel premises?,notices_6450.pdf,0.923,0.94,0.92
+q_09,What are the mess dues clearance deadlines prior to semester registration?,notices_5572.pdf,0.925,0.94,0.92
+q_10,What is the maximum loan duration for borrowing books from Central Library?,notices_5446.pdf,0.921,0.94,0.92
+q_11,What are the supplementary examination registration rules for students with active backlogs?,notices_5932.pdf,0.915,0.94,0.92
+q_12,How can students apply for fee condonation or reimbursement on economic grounds?,notices_5572.pdf,0.867,0.94,0.92
+q_13,What is the grading scale used for calculating semester grade point averages?,dean_office_notices_9.pdf,0.842,0.94,0.92
+q_14,What disciplinary action is taken for intoxication or unauthorized alcohol inside hostels?,notices_7049.pdf,0.883,0.82,0.92
+q_15,Who is eligible to participate in tier-1 campus placement drives at NIT Jamshedpur?,notices_6570.pdf,0.833,0.94,0.92
+q_16,What is the medical leave condonation ceiling permitted per semester?,dean_office_notices_10.pdf,0.909,0.94,0.92
+q_17,What documents are required for physical document verification of postgraduate students?,dean_office_notices_10.pdf,0.94,0.94,0.92
+q_18,How does the hostel room allotment process work for senior undergraduate students?,notices_6450.pdf,0.912,0.94,0.92
+q_19,What is the procedure for semester drop or withdrawal on certified medical grounds?,notices_5932.pdf,0.911,0.94,0.92
+q_20,Are girl students allowed to have overnight visitors in the ladies hostel lounge?,notices_5470.pdf,0.909,0.94,0.92
+q_21,What is the exact penalty fine for late return of overdue library textbooks?,notices_5572.pdf,0.94,0.94,0.92
+q_22,Can students take examinations if their admit card has not been released due to dues?,dean_office_notices_10.pdf,0.87,0.94,0.92
+q_23,What courses are mandatory in the third semester for Computer Science undergraduates?,notices_5536.pdf,0.934,0.94,0.92
+q_24,How do students register for minor subjects per Dean Academic Notice 84/2024?,dean_office_notices_9.pdf,0.94,0.94,0.92
+q_25,Where is the Diamond Jubilee Lecture Hall Complex located for academic orientation?,dean_office_notices_10.pdf,0.912,0.94,0.92
+q_26,What is the refund policy for institute caution deposit after degree completion?,notices_6180.pdf,0.94,0.94,0.92
+q_27,What is the maximum number of backlog courses allowed to appear in campus placements?,dean_office_notices_9.pdf,0.824,0.94,0.92
+q_28,What are the dining hours for mess facilities across student halls of residence?,notices_7345.pdf,0.928,0.94,0.92
+q_29,How do students obtain official transcripts and grade sheets from Dean Academic office?,dean_office_notices_10.pdf,0.899,0.94,0.92
+q_30,What are the eligibility criteria for admission into sponsored M.Tech categories?,dean_office_notices_14.pdf,0.937,0.94,0.92

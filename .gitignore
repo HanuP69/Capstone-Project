@@ -32,6 +32,9 @@ ENV/
 .vscode/
 .idea/
 
+# Data & Documents
+documents/
+
 # OS / Temporary
 Thumbs.db
 Desktop.ini
