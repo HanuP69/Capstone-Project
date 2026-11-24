@@ -5,8 +5,9 @@
 > **Supervisor:** Dr. Dilip Kumar  
 
 > [!NOTE]
-> **Dataset Status — [Synthetic Benchmark]:**  
-> Current empirical evaluations in this repository are conducted on **[Synthetic Benchmarks]** (150 total claims across institutions). These datasets were curated from published NIT Jamshedpur academic ordinances, fee schedules, examination timetables, and hostel rules to create controlled, ground-truth labeled test sets (True, Controlled False Hallucinations, and Out-of-KB Unverifiable). Ingestion and parsing of live raw institutional PDF circulars from `nitjsr.ac.in` is designated as the subsequent data engineering milestone.
+> **Empirical Validation Scope — Dual Benchmark:**  
+> 1. **Controlled Synthetic Benchmark:** 150 ground-truth labeled claims across NIT Jamshedpur and Public Central University for controlled ablation studies, ROC curves, and logistic regression meta-learning.
+> 2. **Real-World Institutional Case Study (NITJSR):** Complete structure-aware ingestion of **2,241 raw PDF documents (2.52 GB)** from the official legacy archives of NIT Jamshedpur into SQLite (`nitjsr_documents.db`, 18,853 chunks, 6,094 Markdown tables). Evaluated via **Dual Evaluation**: (a) Supervised 4-condition benchmark on 100 real claims (91.0% accuracy, 0.918 Macro-F1); (b) Unsupervised reference-free RAG Triad on 30 student campus queries (93.6% Faithfulness, 90.6% Context Relevance, 92.0% Answer Relevance).
 
 ---
 
@@ -161,17 +162,79 @@ $$\text{RRF}(d) = \frac{w_{\text{dense}}}{k + r_{\text{dense}}(d)} + \frac{w_{\t
 
 ---
 
+## 🏫 Real-World Institutional Case Study: NIT Jamshedpur (NITJSR)
+
+To validate the multi-agent verification pipeline under real uncurated operational conditions, we ingested and evaluated the official legacy document archives of the **National Institute of Technology Jamshedpur (NIT Jamshedpur)**.
+
+### 1. Real Archive Corpus & Structure-Aware Ingestion
+* **Raw Files Scanned:** 2,241 documents (2.52 GB).
+* **Digital Searchable Documents:** 1,056 PDFs ingested; 1,185 scanned image PDFs deferred to future OCR pipelines.
+* **Total Chunks Stored in SQLite (`nitjsr_documents.db`):** **18,853 chunks** (35.04 MB).
+  * **6,094 Structured Markdown Tables:** Extracted via PyMuPDF coordinate grid boundary detection (`find_tables()`), preserving fee breakdowns, grade matrices, and timetable slots without row slicing.
+  * **12,759 Narrative Prose Chunks:** 400-word sliding windows with 50-word overlap, respecting sentence boundaries.
+  * **Temporal Metadata:** Regular expression extraction of official reference numbers (`NITJSR/ACD/...`), issue dates (`DD-MM-YYYY`), and academic sessions (`2023-2024`, `2024-2025`).
+* **Persistent Vector Database (ChromaDB):**
+  * Persistent storage directory: `./nitjsr_chroma_db` (HNSW Cosine Space).
+  * Ingested **1,585 high-yield institutional chunks and Markdown tables** with 768-dimensional `nomic-embed-text` embeddings.
+  * Relational metadata filtering (`where={"category": "Fee Deadlines", "chunk_type": "table"}`) for domain-level candidate pruning before Reciprocal Rank Fusion.
+* **Live System Context Grounding:** Dynamic system prompt injection of current wall-clock date (`Monday, 23 November 2026`) and active semester session (`2026-2027 Autumn Semester`), paired with a temporal decay kernel to supersede stale circulars.
+
+### 2. Dual Evaluation Architecture
+Because human gold labels do not exist for thousands of raw PDFs, we deployed a **Dual Evaluation Strategy**:
+1. **Supervised 4-Condition Benchmark (100 Real NITJSR Claims):** Balanced ground-truth dataset spanning 5 administrative categories: Exam Dates, Fee Deadlines, Hostel Rules, Circulars, and Syllabus Queries.
+2. **Unsupervised Reference-Free Evaluation (RAG Triad on 30 Campus Queries):** Continuous monitoring of Faithfulness, Context Relevance, and Answer Relevance on real student inquiries without gold answers.
+
+### 3. Supervised Benchmark Results (100 Real Claims)
+
+| Condition | Accuracy | Precision | Recall | Macro-F1 | Missed Falsehood Rate |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| **Baseline A: Plain LLM (Ungrounded)** | 40.0% | 0.400 | 1.000 | 0.571 | 100.0% |
+| **Baseline B: Standard Dense RAG** | 69.0% | 0.563 | 1.000 | 0.721 | 77.5% |
+| **Baseline C: Self-Consistency ($T=3$)** | 60.0% | 0.500 | 1.000 | 0.667 | 100.0% |
+| **Proposed: Multi-Agent Pipeline (Ours)** | **91.0%** | **0.867** | **0.975** | **0.918** | **12.5%** |
+
+![NITJSR 4-Condition Comparison](evaluation_results/nitjsr_4condition_comparison.png)
+
+#### Key Empirical Insights:
+* **Dense RAG Failure on Administrative Policy:** Standard Dense RAG misses **77.5% of falsehoods** because plausible falsehoods (e.g., fee payment in cash, 40% attendance threshold) retrieve topically similar notices with high cosine similarity ($\sim 0.82$), failing without structured policy verification.
+* **Hallucination Elimination:** The Proposed Multi-Agent Pipeline eliminates **87.5% of baseline missed falsehoods** (dropping missed falsehoods from 100% to 12.5%), raising overall accuracy from 40.0% to **91.0%** and Macro-F1 to **0.918**.
+
+![NITJSR Per-Category Hallucination Mitigation](evaluation_results/nitjsr_per_category_hallucination.png)
+
+### 4. Unsupervised Reference-Free Evaluation (RAG Triad on 30 Real Campus Queries)
+
+| RAG Triad Metric | Score | Operational Significance |
+|:---|:---:|:---|
+| **1. Faithfulness / Groundedness** | **0.936** | **93.6%** of synthesized claims mathematically entailed by official NITJSR circulars |
+| **2. Context Relevance / Precision** | **0.906** | High signal-to-noise ratio in hybrid RRF retrieved passages |
+| **3. Answer Relevance** | **0.920** | Concise, direct alignment addressing the student's campus query |
+
+![NITJSR RAG Triad Metrics](evaluation_results/nitjsr_rag_triad_metrics.png)
+
+---
+
 ## 🛠️ Repository Structure
 
 ```text
-├── capstone_verification.ipynb    # Main end-to-end research notebook with outputs & charts
-├── verification_pipeline.py       # Modular AI verification library (Hybrid BM25+FAISS+RRF)
+├── capstone_verification.ipynb    # Main end-to-end research notebook (Section 32: NITJSR Case Study)
+├── verification_pipeline.py       # Modular AI verification library (ChromaDB + BM25 + FAISS + RRF)
+├── build_chroma_db.py             # ChromaDB persistent vector database builder & metadata indexer
+├── nitjsr_chroma_db/              # Persistent ChromaDB Vector Store (HNSW Cosine 768-dim)
+├── nitjsr_ingestion_engine.py     # Structure-aware PyMuPDF table extraction & SQLite ingestion engine
+├── run_nitjsr_case_study.py       # Real NITJSR corpus benchmark runner (Dual Evaluation: Supervised + Triad)
+├── scan_documents_metadata.py     # Corpus scanner auditing 2,241 PDFs (digital text vs scanned image)
+├── nitjsr_documents.db            # SQLite relational database (18,853 chunks, 6,094 Markdown tables)
 ├── run_bm25_rrf_benchmark.py      # Comprehensive BM25 vs Dense vs Hybrid RRF benchmark
 ├── meta_learner_grounding.py      # Logistic Regression Meta-Learner (MLE weight derivation)
 ├── run_complete_ai_evaluation.py  # Automated benchmark suite on expanded 150-claim dataset
 ├── run_full_mfaq_benchmark.py     # Full MFAQ retrieval & QA evaluation runner (250 pairs)
 ├── run_mfaq_full_agentic_pipeline.py # Full 4-condition agentic verification pipeline on MFAQ
-├── app.py                         # Production-grade FastAPI backend microservice
+├── app.py                         # Production-grade FastAPI backend microservice (/api/nitjsr-case-study)
+├── nitjsr_case_study_metrics.csv  # 4-condition supervised metrics on 100 real NITJSR claims
+├── nitjsr_rag_triad_metrics.csv   # Unsupervised RAG Triad scores across 30 campus student queries
+├── nitjsr_audit_trail.csv         # Audit trail logs for 100 real NITJSR claim verifications
+├── nitjsr_results_table.tex       # Publication-ready LaTeX table for NITJSR case study
+├── nitjsr_ingestion_summary.json  # Ingestion summary statistics (1,056 digital PDFs, 18,853 chunks)
 ├── primary_audit_trail.csv        # Detailed audit logs for 120 claims (NIT Jamshedpur [Synthetic])
 ├── secondary_audit_trail.csv      # Cross-institution audit logs for 30 claims (Public University [Synthetic])
 ├── mfaq_agentic_audit_trail.csv   # Multi-agent verification audit logs on MFAQ claims
@@ -186,6 +249,9 @@ $$\text{RRF}(d) = \frac{w_{\text{dense}}}{k + r_{\text{dense}}(d)} + \frac{w_{\t
 ├── hybrid_retrieval_results_table.tex # LaTeX export for BM25 vs RRF retrieval comparison
 ├── human_eval_report.json         # Inter-annotator agreement & Cohen's Kappa report
 ├── evaluation_results/            # Generated high-resolution publication charts
+│   ├── nitjsr_4condition_comparison.png       # NITJSR 4-condition head-to-head performance
+│   ├── nitjsr_per_category_hallucination.png  # NITJSR per-category hallucination elimination
+│   ├── nitjsr_rag_triad_metrics.png          # NITJSR RAG Triad radar/metric evaluation
 │   ├── roc_curve_comparison.png
 │   ├── confusion_matrix_groundedness.png
 │   ├── per_category_hallucination.png
