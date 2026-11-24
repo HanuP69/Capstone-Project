@@ -305,6 +305,18 @@ curl -X POST "http://localhost:8000/api/verify-claim" \
      -d '{"claim": "The semester registration deadline at NIT Jamshedpur is 15 August 2026.", "institution": "NITJ"}'
 ```
 
+### Running the Local React Dashboard
+The research dashboard lives in `dashboard/` and defaults to mock mode using benchmark records and metrics already present in this repository.
+
+```powershell
+cd dashboard
+Copy-Item .env.example .env
+npm install
+npm run dev
+```
+
+To send verification queries to the real FastAPI service, set `USE_MOCK=false` in `dashboard/.env`, then start the backend from the repository root on port `8000`. See [`dashboard/README.md`](dashboard/README.md) for API details and production-build commands. The institutional benchmarks shown by the dashboard are synthetic; they are not a live NIT Jamshedpur data feed.
+
 ---
 
 ## 👥 Capstone Team

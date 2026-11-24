@@ -5,9 +5,9 @@ Based on B.Tech Capstone Research Proposal:
 "A Case Study on NIT Jamshedpur's Academic & Administrative Query Assistant,
  Validated Across Institutions"
 
-NOTE: All institutional datasets, policy rules, and structured records used in this
-module are [Synthetic Benchmarks] derived from NIT Jamshedpur academic ordinances,
-timetables, and fee structures for controlled empirical evaluation.
+NOTE: The NITJ and PUBLIC fixtures in this module are [Synthetic Benchmarks] for
+controlled evaluation. NITJ_REAL retrieves from the persistent NIT Jamshedpur
+document archive in ChromaDB and uses local Ollama generation/embeddings.
 """
 
 import os
@@ -447,10 +447,11 @@ SYNTHETIC_PUBLIC_POLICIES: List[PolicyRule] = [
 # LLM & Vector Utilities
 # ============================================================================
 class LLMClient:
-    def __init__(self, gen_model: str = DEFAULT_GEN_MODEL, emb_model: str = DEFAULT_EMB_MODEL, cache_dir: str = "nb_cache"):
+    def __init__(self, gen_model: str = DEFAULT_GEN_MODEL, emb_model: str = DEFAULT_EMB_MODEL, cache_dir: str = "nb_cache", strict: bool = False):
         self.gen_model = gen_model
         self.emb_model = emb_model
         self.cache_dir = cache_dir
+        self.strict = strict
         os.makedirs(cache_dir, exist_ok=True)
         self.llm_cache_path = os.path.join(cache_dir, "llm_cache.json")
         self.emb_cache_path = os.path.join(cache_dir, "emb_cache.json")
@@ -504,6 +505,8 @@ class LLMClient:
                 return content
             except Exception:
                 time.sleep(1.0)
+        if self.strict:
+            raise RuntimeError(f"Local Ollama generation failed for model '{self.gen_model}'. Ensure Ollama is running and the model is installed.")
         return ""
 
     def embed_texts(self, texts: List[str]) -> np.ndarray:
@@ -536,7 +539,9 @@ class LLMClient:
                             s_res = ollama.embed(model=self.emb_model, input=[text])
                             vectors[idx] = s_res["embeddings"][0]
                             self.emb_cache[self._hash(text)] = s_res["embeddings"][0]
-                        except Exception:
+                        except Exception as exc:
+                            if self.strict:
+                                raise RuntimeError(f"Local Ollama embedding failed for model '{self.emb_model}'. Ensure Ollama is running and the model is installed.") from exc
                             vectors[idx] = [0.0] * dim
             self._save_cache()
         return np.array(vectors, dtype=np.float32)
@@ -633,11 +638,12 @@ class FactCheckAgent:
 class PolicyComplianceAgent:
     """
     Data-driven academic policy compliance checker.
-    Iterates dynamically through PolicyRules without hardcoded parameters.
+    Iterates dynamically through PolicyRules without hardcoding parameters.
     Flags all synthetic checks with [Synthetic Policy].
     """
-    def __init__(self, rules: List[PolicyRule]):
+    def __init__(self, rules: List[PolicyRule], use_benchmark_heuristics: bool = True):
         self.rules = rules
+        self.use_benchmark_heuristics = use_benchmark_heuristics
 
     def _extract_numbers(self, text: str) -> List[float]:
         return [float(t) for t in re.findall(r"\b\d+(?:\.\d+)?\b", text.replace(",", ""))]
@@ -645,6 +651,8 @@ class PolicyComplianceAgent:
     def verify(self, claim: str) -> Tuple[float, str]:
         c_lower = claim.lower()
         nums = self._extract_numbers(c_lower)
+        if not self.use_benchmark_heuristics:
+            return 0.5, "[No structured NITJSR policy rules loaded] Decision relies on retrieved archive evidence."
 
         # Unverifiable / Absurdity Detector (Out-of-Domain speculative assertions)
         unverifiable_cues = [
@@ -771,13 +779,17 @@ class GroundingAgent:
         self.chroma_dir = chroma_dir
         self.chroma_collection = None
 
-        if chroma_dir and os.path.exists(chroma_dir):
+        if chroma_dir:
+            if not os.path.exists(chroma_dir):
+                raise RuntimeError(f"NITJSR ChromaDB directory is missing: {chroma_dir}")
             try:
                 import chromadb
                 client = chromadb.PersistentClient(path=chroma_dir)
                 self.chroma_collection = client.get_collection(name=chroma_collection_name)
-            except Exception:
-                self.chroma_collection = None
+                if self.chroma_collection.count() <= 0:
+                    raise RuntimeError(f"ChromaDB collection '{chroma_collection_name}' is empty.")
+            except Exception as exc:
+                raise RuntimeError(f"Unable to open NITJSR ChromaDB collection '{chroma_collection_name}' at {chroma_dir}: {exc}") from exc
 
         self._build_indices()
 
@@ -828,11 +840,20 @@ class GroundingAgent:
                 cid = res["ids"][0][rank]
                 dist = res["distances"][0][rank] if "distances" in res and res["distances"] else 0.5
                 sim = max(0.0, min(1.0, 1.0 - dist))
+                metadata = (res.get("metadatas") or [[{}]])[0][rank] or {}
                 item = doc_id_map.get(cid, {
                     "id": cid,
                     "text": res["documents"][0][rank],
-                    "title": res["metadatas"][0][rank].get("doc_name", cid) if res["metadatas"] else cid
+                    "title": metadata.get("doc_name", cid),
+                    **metadata
                 }).copy()
+                item.update({key: value for key, value in metadata.items() if value is not None})
+                item["source_reference"] = (
+                    f"{metadata.get('doc_name', cid)}"
+                    f" | Ref: {metadata.get('ref_number', 'Unknown')}"
+                    f" | Date: {metadata.get('issue_date', 'Unknown')}"
+                    f" | Page: {metadata.get('page_number', 'Unknown')}"
+                )
                 item["similarity_score"] = float(sim)
                 item["dense_score"] = float(sim)
                 item["rank"] = rank + 1
@@ -1053,16 +1074,18 @@ class AcademicVerificationPipeline:
         emb_model: str = DEFAULT_EMB_MODEL,
         cache_dir: str = "nb_cache"
     ):
-        self.docs = docs if docs is not None else SYNTHETIC_NITJ_DOCS
-        self.records = records if records is not None else SYNTHETIC_NITJ_RECORDS
-        self.policies = policies if policies is not None else SYNTHETIC_NITJ_POLICIES
+        self.is_real_corpus = chroma_dir is not None
+        self.dataset_mode = "NIT Jamshedpur archive (ChromaDB)" if self.is_real_corpus else "[Synthetic Benchmark]"
+        self.docs = docs if docs is not None else ([] if self.is_real_corpus else SYNTHETIC_NITJ_DOCS)
+        self.records = records if records is not None else ([] if self.is_real_corpus else SYNTHETIC_NITJ_RECORDS)
+        self.policies = policies if policies is not None else ([] if self.is_real_corpus else SYNTHETIC_NITJ_POLICIES)
         self.retrieval_mode = retrieval_mode
         self.chroma_dir = chroma_dir
-        self.llm = LLMClient(gen_model=gen_model, emb_model=emb_model, cache_dir=cache_dir)
+        self.llm = LLMClient(gen_model=gen_model, emb_model=emb_model, cache_dir=cache_dir, strict=self.is_real_corpus)
         
         self.claim_extractor = ClaimExtractor(self.llm)
         self.fact_agent = FactCheckAgent(self.records)
-        self.policy_agent = PolicyComplianceAgent(self.policies)
+        self.policy_agent = PolicyComplianceAgent(self.policies, use_benchmark_heuristics=not self.is_real_corpus)
         self.grounding_agent = GroundingAgent(
             self.docs,
             self.llm,
@@ -1128,10 +1151,13 @@ class AcademicVerificationPipeline:
             predicted_label=pred_label,
             fact_explanation=f_exp,
             policy_explanation=p_exp,
-            retrieved_contexts=[d["text"] for d in retrieved],
+            retrieved_contexts=[
+                f"[{d.get('source_reference', d.get('title', d.get('id', 'Retrieved source')))}] {d['text']}"
+                for d in retrieved
+            ],
             regenerated_claim=regen_text,
             retrieval_method=ret_method,
-            is_synthetic_benchmark=True
+            is_synthetic_benchmark=not self.is_real_corpus
         )
 
     def process_query(self, query: str) -> PipelineResponse:
@@ -1179,5 +1205,5 @@ class AcademicVerificationPipeline:
             blocked_claims=b_count,
             latency_seconds=latency,
             audit_trail=audit_trail,
-            dataset_mode="[Synthetic Benchmark]"
+            dataset_mode=self.dataset_mode
         )

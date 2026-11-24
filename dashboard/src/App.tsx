@@ -13,7 +13,7 @@ const AuditPage = lazy(() => import('./pages/AuditPage').then((module) => ({ def
 const AboutPage = lazy(() => import('./pages/AboutPage').then((module) => ({ default: module.AboutPage })));
 
 const githubUrl = 'https://github.com/HanuP69/Capstone-Project';
-const benchmarkNotice = 'Results are from a synthetic benchmark built from NIT Jamshedpur ordinances. Live circular ingestion is future work.';
+const benchmarkNotice = 'Results use a synthetic benchmark. Verify queries use the ingested NIT Jamshedpur archive through ChromaDB; this is not a live institute feed.';
 
 export default function App() {
   const [data, setData] = useState<DataBundle | null>(null);

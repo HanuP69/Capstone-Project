@@ -1,10 +1,10 @@
-import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { useLayoutEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import type { Decision } from '../types';
 
 const navigation = [
-  { to: '/verify', label: 'Demo' },
+  { to: '/verify', label: 'Verify' },
   { to: '/pipeline', label: 'How it works' },
   { to: '/evaluation', label: 'Results' },
   { to: '/audit', label: 'Audit trail' },
@@ -55,10 +55,14 @@ export function MetricCard({ label, value, note, className = '' }: { label: stri
   return <div className={`metric-card ${className}`}><span className="metric-top">{label}</span><strong className="metric-value"><CountUp value={value} /></strong><span className="metric-note">{note}</span></div>;
 }
 export function CountUp({ value }: { value: string }) {
-  const [display, setDisplay] = useState(value);
-  useEffect(() => {
+  const [display, setDisplay] = useState(() => {
     const match = value.match(/^(-?\d+(?:\.\d+)?)(.*)$/);
-    if (!match || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setDisplay(value); return; }
+    return match ? `${(0).toFixed(match[1].split('.')[1]?.length ?? 0)}${match[2]}` : value;
+  });
+  useLayoutEffect(() => {
+    const match = value.match(/^(-?\d+(?:\.\d+)?)(.*)$/);
+    if (!match) { setDisplay(value); return; }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setDisplay(value); return; }
     const target = Number(match[1]);
     const suffix = match[2];
     const decimals = match[1].split('.')[1]?.length ?? 0;
@@ -76,7 +80,7 @@ export function CountUp({ value }: { value: string }) {
   }, [value]);
   return <span aria-label={value}>{display}</span>;
 }
-export function VerdictBadge({ decision, compact: _compact = false }: { decision: Decision; compact?: boolean }) {
+export function VerdictBadge({ decision }: { decision: Decision; compact?: boolean }) {
   return <span className={`verdict verdict-${decision.toLowerCase()}`} aria-label={`Verdict: ${decision}`}><span className="verdict-dot" aria-hidden="true" /><span>{decision}</span></span>;
 }
 export function Skeleton() { return <div className="skeleton-block" aria-label="Loading content"><span /><span /><span /></div>; }

@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss()],
     define: {
-      'import.meta.env.USE_MOCK': JSON.stringify(env.USE_MOCK ?? 'true'),
+      'import.meta.env.USE_MOCK': JSON.stringify(env.USE_MOCK ?? 'false'),
     },
     build: {
       rollupOptions: {

@@ -10,19 +10,13 @@ export function HomePage({ data }: { data: DataBundle }) {
       <div className="home-intro">
         <h1>Academic answers, checked claim by claim</h1>
         <p>Language models can invent exam dates, fees and rules. This project checks each statement against institutional records and policy before presenting an answer.</p>
-        <Link className="button button-primary" to="/verify">Open the demo <span aria-hidden="true">→</span></Link>
+        <Link className="button button-primary" to="/verify">Ask about NIT Jamshedpur <span aria-hidden="true">→</span></Link>
       </div>
       <ExamplePreview rows={previewRows} />
     </section>
 
     <section className="home-results" aria-labelledby="home-results-title">
-      <div className="section-heading-block"><div><h2 id="home-results-title">Reported evaluation results</h2><p>NIT Jamshedpur benchmark · 120 claims, with a separate 80-claim human agreement study.</p></div><Link to="/evaluation">View results <span aria-hidden="true">→</span></Link></div>
-      <div className="home-metric-strip">
-        <div><strong>91.7%</strong><span>Accuracy</span></div>
-        <div><strong>2.5%</strong><span>Missed falsehoods</span></div>
-        <div><strong>0.812</strong><span>Cohen’s kappa</span></div>
-        <div><strong>0.926</strong><span>ROC–AUC</span></div>
-      </div>
+      <div className="section-heading-block"><div><h2 id="home-results-title">Results overview</h2><p>Benchmark performance and supporting evaluation measures are collected on the Results page.</p></div><Link to="/evaluation">View results <span aria-hidden="true">→</span></Link></div>
     </section>
 
     <section className="home-method" aria-labelledby="home-method-title">
@@ -38,12 +32,12 @@ export function HomePage({ data }: { data: DataBundle }) {
 
 function ExamplePreview({ rows }: { rows: AuditRow[] }) {
   return <section className="example-preview" aria-label="Example verification result">
-    <div className="preview-head"><span>Example result</span><span>NIT Jamshedpur</span></div>
+    <div className="preview-head"><span>Benchmark sample</span><span>NIT Jamshedpur</span></div>
     <p className="preview-query">“When are mid-semester examinations scheduled?”</p>
     <div className="preview-claims">
-      {rows.map((row) => <div className="preview-claim" key={row.id}><div><span className="preview-category">{row.category}</span><p>{row.claim}</p></div><span className="preview-score">{row.G.toFixed(2)}</span><VerdictBadge decision={row.decision} compact /></div>)}
+      {rows.map((row) => <div className="preview-claim" key={row.id}><div><span className="preview-category">{row.category}</span><p>{row.claim}</p></div><VerdictBadge decision={row.decision} compact /></div>)}
       {!rows.length && <p>No example records are available.</p>}
     </div>
-    <div className="preview-foot"><span>Claim score G(c)</span><Link to="/verify">Try a question <span aria-hidden="true">→</span></Link></div>
+    <div className="preview-foot"><span>Evidence review</span><Link to="/verify">Try a question <span aria-hidden="true">→</span></Link></div>
   </section>;
 }

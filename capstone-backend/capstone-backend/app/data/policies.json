@@ -1,0 +1,4 @@
+[
+  {"id": "POL-001", "keywords": ["attendance"], "op": "eq", "value": 75, "description": "Minimum attendance required is 75%."},
+  {"id": "POL-002", "keywords": ["courses", "credits"], "min_keywords": 1, "op": "le", "value": 30, "description": "Maximum credits per semester is 30."}
+]

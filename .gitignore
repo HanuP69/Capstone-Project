@@ -50,3 +50,4 @@ dashboard/public/data/figures/*.png
 .work/
 node_modules/
 dist/
+.manus/

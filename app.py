@@ -27,7 +27,7 @@ from verification_pipeline import (
 )
 
 app = FastAPI(
-    title="Institutional Academic Assistant Verification API [Synthetic Benchmark]",
+    title="Institutional Academic Assistant Verification API",
     description="Multi-Agent Groundedness Verification Pipeline (NIT Jamshedpur & Cross-Institution Benchmark)",
     version="1.0.0"
 )
@@ -55,14 +55,20 @@ pipelines = {
 }
 
 CHROMA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nitjsr_chroma_db")
+NITJ_REAL_ERROR = None
 if os.path.exists(CHROMA_DIR):
-    pipelines["NITJ_REAL"] = AcademicVerificationPipeline(
-        docs=[],
-        records=[],
-        chroma_dir=CHROMA_DIR,
-        chroma_collection_name="nitjsr_knowledge_base",
-        use_meta_learner=True
-    )
+    try:
+        pipelines["NITJ_REAL"] = AcademicVerificationPipeline(
+            docs=[],
+            records=[],
+            chroma_dir=CHROMA_DIR,
+            chroma_collection_name="nitjsr_knowledge_base",
+            use_meta_learner=True
+        )
+    except Exception as exc:
+        NITJ_REAL_ERROR = f"NITJSR archive service could not initialize: {exc}"
+else:
+    NITJ_REAL_ERROR = f"NITJSR ChromaDB directory is missing: {CHROMA_DIR}"
 
 AUDIT_LOGS_FILE = "api_audit_log.json"
 audit_logs = []
@@ -170,6 +176,8 @@ def root():
 def verify_claim(req: ClaimVerifyRequest):
     inst = req.institution.upper()
     if inst not in pipelines:
+        if inst == "NITJ_REAL":
+            raise HTTPException(status_code=503, detail=NITJ_REAL_ERROR or "NITJSR archive service is unavailable.")
         raise HTTPException(status_code=400, detail=f"Institution '{req.institution}' not supported. Use 'NITJ_REAL', 'NITJ', or 'PUBLIC'.")
     pipeline = pipelines[inst]
 
@@ -178,6 +186,10 @@ def verify_claim(req: ClaimVerifyRequest):
 
     try:
         result = pipeline.verify_single_claim(req.claim, retrieval_mode=req.retrieval_mode)
+    except Exception as exc:
+        if inst == "NITJ_REAL":
+            raise HTTPException(status_code=503, detail=f"NITJSR archive verification failed: {exc}") from exc
+        raise
     finally:
         pipeline.scorer.weights = orig_weights
 
@@ -194,7 +206,7 @@ def verify_claim(req: ClaimVerifyRequest):
         "G": result.G_score,
         "decision": result.decision,
         "pred": result.predicted_label,
-        "dataset_mode": "[Synthetic Benchmark]"
+        "dataset_mode": pipeline.dataset_mode
     }
     save_audit(log_item)
 
@@ -214,13 +226,15 @@ def verify_claim(req: ClaimVerifyRequest):
         regenerated_claim=result.regenerated_claim,
         weighting_mode="meta_learner_mle" if req.use_meta_learner else "default_heuristic",
         retrieval_method=result.retrieval_method,
-        is_synthetic_benchmark=True
+        is_synthetic_benchmark=result.is_synthetic_benchmark
     )
 
 @app.post("/api/verify-query", response_model=QueryResponse)
 def verify_query(req: QueryRequest):
     inst = req.institution.upper()
     if inst not in pipelines:
+        if inst == "NITJ_REAL":
+            raise HTTPException(status_code=503, detail=NITJ_REAL_ERROR or "NITJSR archive service is unavailable.")
         raise HTTPException(status_code=400, detail=f"Institution '{req.institution}' not supported.")
     pipeline = pipelines[inst]
 
@@ -229,6 +243,10 @@ def verify_query(req: QueryRequest):
 
     try:
         resp = pipeline.process_query(req.query)
+    except Exception as exc:
+        if inst == "NITJ_REAL":
+            raise HTTPException(status_code=503, detail=f"NITJSR archive verification failed: {exc}") from exc
+        raise
     finally:
         pipeline.scorer.weights = orig_weights
 
@@ -243,7 +261,7 @@ def verify_query(req: QueryRequest):
         "passed": resp.passed_claims,
         "blocked": resp.blocked_claims,
         "latency": resp.latency_seconds,
-        "dataset_mode": "[Synthetic Benchmark]"
+        "dataset_mode": resp.dataset_mode
     }
     save_audit(log_item)
 
@@ -263,7 +281,7 @@ def verify_query(req: QueryRequest):
             retrieved_contexts=c.retrieved_contexts,
             regenerated_claim=c.regenerated_claim,
             weighting_mode="meta_learner_mle" if req.use_meta_learner else "default_heuristic",
-            is_synthetic_benchmark=True
+            is_synthetic_benchmark=c.is_synthetic_benchmark
         ) for c in resp.claims
     ]
 
@@ -278,7 +296,7 @@ def verify_query(req: QueryRequest):
         blocked_claims=resp.blocked_claims,
         latency_seconds=resp.latency_seconds,
         claims=claim_responses,
-        dataset_mode="[Synthetic Benchmark]"
+        dataset_mode=resp.dataset_mode
     )
 
 @app.get("/api/meta-learner")
