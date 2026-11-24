@@ -27,7 +27,6 @@ venv/
 env/
 **/env/
 node_modules/
-dist/
 .vite/
 coverage/
 .pytest_cache/
