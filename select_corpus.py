@@ -72,19 +72,19 @@ def main():
     with open(DATA / "scan.json", "w", encoding="utf-8") as f:
         json.dump(rows, f, indent=2)
 
+    # Select ALL qualifying PDFs rather than a capped quota.
+    # Topic assignment is still computed (first-matching topic wins) so the
+    # dashboard topic breakdown stays meaningful, but every row in the pool is
+    # included regardless of PDF_TARGET.
     chosen = {}
     for topic, (_, quota) in TOPICS.items():
         cands = [r for r in rows if r["hits"][topic] > 0 and r["doc_name"] not in chosen]
         cands.sort(key=lambda r: (r["hits"][topic], r["issue_date"], r["distinct_topics"]), reverse=True)
-        for r in cands[:quota]:
+        for r in cands:
             chosen[r["doc_name"]] = topic
 
     rest = [r for r in rows if r["doc_name"] not in chosen]
-    rest.sort(key=lambda r: (r["distinct_topics"], r["issue_date"]), reverse=True)
-    target = min(PDF_TARGET, len(rows))
     for r in rest:
-        if len(chosen) >= target:
-            break
         chosen[r["doc_name"]] = "fill"
 
     selected = sorted(chosen)

@@ -1,8 +1,8 @@
 {
-  "tau_pass": 0.6,
-  "tau_contra": 0.62,
-  "dev_macro_f1": 0.9264,
-  "dev_accuracy": 0.9274,
+  "tau_pass": 0.5,
+  "tau_contra": 0.7,
+  "dev_macro_f1": 0.9415,
+  "dev_accuracy": 0.9406,
   "weights": {
     "w_fact": 0.4,
     "w_policy": 0.25,

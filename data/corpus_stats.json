@@ -1,28 +1,27 @@
 {
-  "pdfs_selected": 180,
-  "pdfs_parsed": 180,
+  "pdfs_total": 2241,
+  "pdfs_selected": 463,
+  "pdfs_parsed": 463,
   "failures": [],
-  "chunks_raw": 1826,
-  "chunks_dedup": 1423,
-  "duplicates_removed": 403,
-  "prose_chunks": 732,
-  "table_chunks": 691,
-  "with_date": 1124,
-  "with_ref": 755,
-  "latest_chunks": 326,
-  "median_prose_words": 159.5,
+  "chunks_raw": 5464,
+  "chunks_dedup": 3986,
+  "duplicates_removed": 1478,
+  "prose_chunks": 1931,
+  "table_chunks": 2055,
+  "with_date": 2184,
+  "with_ref": 1538,
+  "latest_chunks": 362,
+  "median_prose_words": 146,
   "max_prose_words": 240,
   "categories": {
-    "Circulars": 508,
-    "Fee Deadlines": 214,
-    "Syllabus Queries": 166,
-    "Hostel Rules": 80,
-    "Exam Dates": 455
+    "Circulars": 1482,
+    "Exam Dates": 1527,
+    "Fee Deadlines": 275,
+    "Syllabus Queries": 554,
+    "Hostel Rules": 148
   },
   "date_range": [
-    "2023-07-26",
-    "2026-09-28"
-  ],
-  "pdfs_total": 2241,
-  "pdfs_pool": 463
+    "2002-12-27",
+    "2026-10-07"
+  ]
 }

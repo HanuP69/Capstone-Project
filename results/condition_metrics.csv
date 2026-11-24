@@ -1,5 +1,5 @@
 condition,n,accuracy,macro_precision,macro_recall,macro_f1,missed_falsehood_rate,abstention_rate,per_class_precision,per_class_recall,per_class_f1
-pred_a,109,0.1284,0.0549,0.1228,0.0759,1.0,0.7798,"{'true': 0.0, 'false': 0.0, 'unverifiable': 0.165}","{'true': 0.0, 'false': 0.0, 'unverifiable': 0.368}","{'true': 0.0, 'false': 0.0, 'unverifiable': 0.228}"
-pred_b,109,0.5321,0.6905,0.5438,0.4702,0.0571,0.0367,"{'true': 0.6, 'false': 0.471, 'unverifiable': 1.0}","{'true': 0.583, 'false': 0.943, 'unverifiable': 0.105}","{'true': 0.592, 'false': 0.629, 'unverifiable': 0.19}"
-pred_c,109,0.5321,0.6879,0.5431,0.4798,0.0857,0.0459,"{'true': 0.6, 'false': 0.464, 'unverifiable': 1.0}","{'true': 0.583, 'false': 0.914, 'unverifiable': 0.132}","{'true': 0.592, 'false': 0.615, 'unverifiable': 0.233}"
-pred_d,109,0.9083,0.9113,0.9076,0.9078,0.0857,0.3578,"{'true': 0.969, 'false': 0.842, 'unverifiable': 0.923}","{'true': 0.861, 'false': 0.914, 'unverifiable': 0.947}","{'true': 0.912, 'false': 0.877, 'unverifiable': 0.935}"
+pred_a,129,0.1163,0.0581,0.1302,0.0756,1.0,0.7984,"{'true': 0.038, 'false': 0.0, 'unverifiable': 0.136}","{'true': 0.022, 'false': 0.0, 'unverifiable': 0.368}","{'true': 0.028, 'false': 0.0, 'unverifiable': 0.199}"
+pred_b,129,0.6047,0.6767,0.576,0.5179,0.0217,0.0388,"{'true': 0.674, 'false': 0.556, 'unverifiable': 0.8}","{'true': 0.644, 'false': 0.978, 'unverifiable': 0.105}","{'true': 0.659, 'false': 0.709, 'unverifiable': 0.186}"
+pred_c,129,0.6202,0.7429,0.5935,0.5481,0.0217,0.0465,"{'true': 0.659, 'false': 0.57, 'unverifiable': 1.0}","{'true': 0.644, 'false': 0.978, 'unverifiable': 0.158}","{'true': 0.652, 'false': 0.72, 'unverifiable': 0.273}"
+pred_d,129,0.9147,0.9143,0.9166,0.9151,0.1087,0.3101,"{'true': 0.911, 'false': 0.932, 'unverifiable': 0.9}","{'true': 0.911, 'false': 0.891, 'unverifiable': 0.947}","{'true': 0.911, 'false': 0.911, 'unverifiable': 0.923}"

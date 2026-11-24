@@ -40,7 +40,7 @@ const metricsTable = (rows) => table([
 
 const qualityMap = Object.fromEntries((DATA.quality || []).map((row) => [row.metric, row.value]));
 const findMetric = (rows, condition) => (rows || []).find((row) => row.condition === condition) || {};
-const allD = findMetric(DATA.metrics, 'pred_d');
+const allD = findMetric((DATA.subsets || []).filter((row) => row.subset === 'all'), 'pred_d');
 const realD = findMetric((DATA.subsets || []).filter((row) => row.subset === 'real_chunk'), 'pred_d');
 
 $('#dataset-mode').textContent = DATA.dataset_mode || '';

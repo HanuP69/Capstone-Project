@@ -1,17 +1,17 @@
 {
-  "chunks": 1423,
+  "chunks": 3986,
   "dim": 768,
   "emb_model": "nomic-embed-text:latest",
   "collection": "nitj_chunks",
   "categories": {
-    "Circulars": 508,
-    "Fee Deadlines": 214,
-    "Syllabus Queries": 166,
-    "Hostel Rules": 80,
-    "Exam Dates": 455
+    "Circulars": 1482,
+    "Exam Dates": 1527,
+    "Fee Deadlines": 275,
+    "Syllabus Queries": 554,
+    "Hostel Rules": 148
   },
-  "with_date": 1124,
-  "latest": 326,
-  "built_at": "2026-11-24T06:04:39",
-  "seconds": 27.8
+  "with_date": 2184,
+  "latest": 362,
+  "built_at": "2026-11-24T22:17:24",
+  "seconds": 67.3
 }

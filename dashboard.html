@@ -1,7 +1,7 @@
 <html><head><meta charset='utf-8'><title>NITJ verification</title>
 <style>body{font-family:system-ui;margin:2rem;max-width:1100px}td,th{border:1px solid #ccc;padding:6px}th{background:#f2f2f2}</style></head><body>
 <h1>Groundedness verification dashboard</h1>
-<p>1423 chunks over 180 PDFs; 1423 indexed vectors.</p>
+<p>3986 chunks over 463 PDFs; 3986 indexed vectors.</p>
 <h2>Real-chunk test set</h2><table class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -18,38 +18,38 @@
     <tr>
       <td>real_chunk</td>
       <td>A plain LLM</td>
-      <td>71</td>
-      <td>0.0000</td>
-      <td>0.0000</td>
+      <td>91</td>
+      <td>0.0110</td>
+      <td>0.0213</td>
       <td>1.0000</td>
-      <td>1.0000</td>
+      <td>0.978</td>
     </tr>
     <tr>
       <td>real_chunk</td>
       <td>B RAG</td>
-      <td>71</td>
-      <td>0.7606</td>
-      <td>0.7535</td>
-      <td>0.0571</td>
-      <td>0.0000</td>
+      <td>91</td>
+      <td>0.8132</td>
+      <td>0.8112</td>
+      <td>0.0217</td>
+      <td>0.011</td>
     </tr>
     <tr>
       <td>real_chunk</td>
       <td>C RAG self-consistency</td>
-      <td>71</td>
-      <td>0.7465</td>
-      <td>0.7402</td>
-      <td>0.0857</td>
-      <td>0.0000</td>
+      <td>91</td>
+      <td>0.8132</td>
+      <td>0.8072</td>
+      <td>0.0217</td>
+      <td>0.000</td>
     </tr>
     <tr>
       <td>real_chunk</td>
       <td>D verified pipeline</td>
-      <td>71</td>
-      <td>0.8873</td>
-      <td>0.9066</td>
-      <td>0.0857</td>
-      <td>0.0423</td>
+      <td>91</td>
+      <td>0.9011</td>
+      <td>0.9213</td>
+      <td>0.1087</td>
+      <td>0.044</td>
     </tr>
   </tbody>
 </table>
@@ -67,71 +67,71 @@
   <tbody>
     <tr>
       <td>A plain LLM</td>
-      <td>109</td>
-      <td>0.1284</td>
-      <td>0.0759</td>
+      <td>129</td>
+      <td>0.1163</td>
+      <td>0.0756</td>
       <td>1.0000</td>
-      <td>0.7798</td>
+      <td>0.7984</td>
     </tr>
     <tr>
       <td>B RAG</td>
-      <td>109</td>
-      <td>0.5321</td>
-      <td>0.4702</td>
-      <td>0.0571</td>
-      <td>0.0367</td>
+      <td>129</td>
+      <td>0.6047</td>
+      <td>0.5179</td>
+      <td>0.0217</td>
+      <td>0.0388</td>
     </tr>
     <tr>
       <td>C RAG self-consistency</td>
-      <td>109</td>
-      <td>0.5321</td>
-      <td>0.4798</td>
-      <td>0.0857</td>
-      <td>0.0459</td>
+      <td>129</td>
+      <td>0.6202</td>
+      <td>0.5481</td>
+      <td>0.0217</td>
+      <td>0.0465</td>
     </tr>
     <tr>
       <td>D verified pipeline</td>
-      <td>109</td>
-      <td>0.9083</td>
-      <td>0.9078</td>
-      <td>0.0857</td>
-      <td>0.3578</td>
+      <td>129</td>
+      <td>0.9147</td>
+      <td>0.9151</td>
+      <td>0.1087</td>
+      <td>0.3101</td>
     </tr>
   </tbody>
 </table>
 <h2>Statistics</h2><pre>{
-  "n_scored": 109,
+  "n_scored": 129,
   "n_excluded_contaminated": 0,
-  "n_absence_above_generation_threshold": 0,
+  "n_absence_above_generation_threshold": 2,
   "mcnemar_d_vs_b": {
-    "d_better": 45,
+    "d_better": 44,
     "b_better": 4,
     "p_value": 0.0
   },
   "mcnemar_d_vs_a": {
-    "d_better": 87,
+    "d_better": 105,
     "b_better": 2,
     "p_value": 0.0
   },
   "bootstrap_d_minus_b": {
-    "delta": 0.3752,
-    "ci_low": 0.2661,
-    "ci_high": 0.4771
+    "delta": 0.3107,
+    "ci_low": 0.2246,
+    "ci_high": 0.4031
   },
   "confusion_d": [
     [
-      31,
-      4,
-      1
-    ],
-    [
-      1,
-      32,
+      41,
+      2,
       2
     ],
     [
-      0,
-      2,
+      3,
+      41,
+      2
+    ],
+    [
+      1,
+      1,
       36
     ]
   ],
@@ -141,66 +141,66 @@
     "unverifiable"
   ],
   "judge_backend": "nli",
-  "seconds": 674.8,
-  "brier_d": 0.0751,
+  "seconds": 2172.4,
+  "brier_d": 0.0827,
   "calibration_d": [
     {
       "bin": "(-0.001, 0.1]",
-      "n": 27,
-      "mean_pred": 0.005,
-      "frac_true": 0.0
+      "n": 42,
+      "mean_pred": 0.004,
+      "frac_true": 0.095
     },
     {
       "bin": "(0.1, 0.2]",
       "n": 3,
-      "mean_pred": 0.15,
-      "frac_true": 0.333
+      "mean_pred": 0.134,
+      "frac_true": 0.0
+    },
+    {
+      "bin": "(0.2, 0.3]",
+      "n": 1,
+      "mean_pred": 0.273,
+      "frac_true": 0.0
     },
     {
       "bin": "(0.3, 0.4]",
       "n": 1,
-      "mean_pred": 0.308,
-      "frac_true": 0.0
-    },
-    {
-      "bin": "(0.4, 0.5]",
-      "n": 2,
-      "mean_pred": 0.452,
+      "mean_pred": 0.313,
       "frac_true": 0.0
     },
     {
       "bin": "(0.5, 0.6]",
-      "n": 5,
-      "mean_pred": 0.554,
-      "frac_true": 0.8
+      "n": 2,
+      "mean_pred": 0.518,
+      "frac_true": 0.0
     },
     {
       "bin": "(0.6, 0.7]",
-      "n": 15,
-      "mean_pred": 0.649,
-      "frac_true": 0.867
+      "n": 17,
+      "mean_pred": 0.652,
+      "frac_true": 0.941
     },
     {
       "bin": "(0.7, 0.8]",
       "n": 4,
-      "mean_pred": 0.747,
+      "mean_pred": 0.739,
       "frac_true": 1.0
     },
     {
       "bin": "(0.8, 0.9]",
-      "n": 4,
-      "mean_pred": 0.869,
+      "n": 6,
+      "mean_pred": 0.856,
       "frac_true": 1.0
     },
     {
       "bin": "(0.9, 1.0]",
-      "n": 10,
-      "mean_pred": 0.958,
+      "n": 15,
+      "mean_pred": 0.965,
       "frac_true": 1.0
     }
   ],
   "headline_subset": "real_chunk_well_formed",
-  "rescored_at": "2026-11-24T20:21:27"
+  "rescored_at": "2026-11-24T23:58:09"
 }</pre>
 <h2>Ablation</h2><table class="dataframe">
   <thead>
@@ -217,48 +217,48 @@
   <tbody>
     <tr>
       <td>cascade</td>
-      <td>0.9083</td>
-      <td>0.9078</td>
-      <td>0.0857</td>
-      <td>0.3578</td>
+      <td>0.9147</td>
+      <td>0.9151</td>
+      <td>0.1087</td>
+      <td>0.3101</td>
       <td>0.0000</td>
       <td>0.0000</td>
     </tr>
     <tr>
       <td>d_only</td>
-      <td>0.5596</td>
-      <td>0.4918</td>
-      <td>0.1429</td>
-      <td>0.0642</td>
-      <td>-0.3487</td>
-      <td>-0.4160</td>
+      <td>0.6589</td>
+      <td>0.5509</td>
+      <td>0.0652</td>
+      <td>0.0233</td>
+      <td>-0.2558</td>
+      <td>-0.3642</td>
     </tr>
     <tr>
       <td>f_only</td>
-      <td>0.8440</td>
-      <td>0.8371</td>
-      <td>0.3714</td>
-      <td>0.4587</td>
-      <td>-0.0643</td>
-      <td>-0.0707</td>
+      <td>0.8682</td>
+      <td>0.8680</td>
+      <td>0.2609</td>
+      <td>0.4031</td>
+      <td>-0.0465</td>
+      <td>-0.0471</td>
     </tr>
     <tr>
       <td>p_only</td>
-      <td>0.3761</td>
-      <td>0.2303</td>
-      <td>0.9714</td>
-      <td>0.9541</td>
-      <td>-0.5322</td>
-      <td>-0.6775</td>
+      <td>0.3178</td>
+      <td>0.1968</td>
+      <td>1.0000</td>
+      <td>0.9457</td>
+      <td>-0.5969</td>
+      <td>-0.7183</td>
     </tr>
     <tr>
       <td>g_only</td>
-      <td>0.5963</td>
-      <td>0.5244</td>
-      <td>0.0857</td>
-      <td>0.0367</td>
-      <td>-0.3120</td>
-      <td>-0.3834</td>
+      <td>0.6667</td>
+      <td>0.5795</td>
+      <td>0.0652</td>
+      <td>0.0465</td>
+      <td>-0.2480</td>
+      <td>-0.3356</td>
     </tr>
   </tbody>
 </table>

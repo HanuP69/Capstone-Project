@@ -84,20 +84,25 @@ def _check_value_in_chunk(orig, kind, text):
             d = _date.fromisoformat(str(orig))
         except (ValueError, TypeError):
             return False
-        import re
         for sep in ('-', '/', '.'):
             for fmt in (
                 f"{d.day:02d}{sep}{d.month:02d}{sep}{d.year}",
                 f"{d.month:02d}{sep}{d.day:02d}{sep}{d.year}",
+                f"{d.day}{sep}{d.month}{sep}{d.year}",
             ):
                 if fmt in text:
                     return True
-        for fmt in (
-            d.strftime("%B %d, %Y"),
-            d.strftime("%d %B %Y"),
-        ):
-            if fmt in text:
-                return True
+        # Textual dates, tolerating ordinal suffixes and arbitrary comma placement:
+        # "30th April 2025", "19th February, 2024", "April 30, 2025", "8 Sept 2023".
+        for month in (d.strftime("%B"), d.strftime("%b")):
+            month_pat = re.escape(month) + r"\.?"
+            day_pat = rf"0?{d.day}(?:st|nd|rd|th)?"
+            for pattern in (
+                rf"\b{day_pat}\s+{month_pat},?\s*{d.year}\b",
+                rf"\b{month_pat}\s+{day_pat},?\s*{d.year}\b",
+            ):
+                if re.search(pattern, text, re.IGNORECASE):
+                    return True
         return False
     if kind == "money":
         s = f"{orig:,.0f}" if "," in text else f"{orig:.0f}"

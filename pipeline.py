@@ -25,7 +25,7 @@ from config import (ANSWER_CTX_CHAR, ANSWER_NUM_PREDICT, ATOMIC_MIN_PART_WORDS, 
                     RETRIEVE_K, ROOT, RRF_K, SEED, SPARSE_WEIGHT, TAU_CONTRA, TAU_PASS,
                     UNSUP_CLAIM_MIN_WORDS, WIDE_SENT_LIMIT)
 from pipeline_text import (age_years, entities, overlap_terms, parse_dates, parse_money,
-                           parse_percent, sentences, tokenize)
+                           parse_percent, reference_date, sentences, tokenize)
 
 INDEX_DIR = ROOT / "index"
 COLLECTION = "nitj_chunks"
@@ -430,6 +430,60 @@ class Gate:
         return G, "FLAG", "unverifiable"
 
 
+def current_session(ref=None):
+    """Academic session for a date; a session starts with the autumn admission in July."""
+    ref = ref or reference_date()
+    start = ref.year if ref.month >= 7 else ref.year - 1
+    return f"{start}-{start + 1}"
+
+
+def context_block(docs, by_id):
+    """Render retrieved chunks for the answer prompt, carrying each chunk's session."""
+    parts = []
+    for d in docs:
+        session = by_id.get(d.get("chunk_id"), {}).get("session", "")
+        stamp = " | ".join(x for x in (d["doc_name"], d["issue_date"], session, d["ref_number"]) if x)
+        parts.append(f"[{stamp}]\n{d['text'][:ANSWER_CTX_CHAR]}")
+    return "\n\n".join(parts)
+
+
+def answer_prompt(query, ctx, today=None):
+    today = today or reference_date()
+    session = current_session(today)
+    return (
+        f"You are the NIT Jamshedpur academic assistant. Use only the context.\n"
+        f"Today is {today.isoformat()}. The current academic session is {session}.\n\n"
+        f"Rules:\n"
+        f"1. Prefer the newest notice for the topic; a newer circular supersedes an older one.\n"
+        f"2. Every context entry shows its issue date and session. If the newest evidence for the "
+        f"question is older than session {session}, say so plainly: state the date and session of the "
+        f"latest available notice and that no {session} notice is in the corpus. Never present an "
+        f"older notice's dates as the current schedule.\n"
+        f"3. Answer in at most three sentences. If the context does not contain the answer, say you "
+        f"do not know.\n\n"
+        f"Context:\n{ctx}\n\n"
+        f"Question: {query}\nAnswer:"
+    )
+
+
+ANSWER_ABBREV = re.compile(
+    r"\b(Rs|No|Nos|Dr|Mr|Mrs|Ms|Prof|Sr|Jr|vs|etc|viz|cf|Fig|Figs|Ref|Vol|Sec|Dept|"
+    r"i\.e|e\.g|Ph\.D|M\.Tech|B\.Tech|M\.Sc|B\.Sc)\.",
+    re.IGNORECASE)
+ANSWER_DOT = "\x01"
+
+
+def answer_sentences(text):
+    """Split a draft answer into sentences without cutting at abbreviations.
+
+    A plain split on '. ' turns "the hostel fee was Rs. 15,000/-" into
+    "the hostel fee was Rs." plus a detached "15,000/-", which drops the amount
+    from the claim and lets it pass unverified.
+    """
+    protected = ANSWER_ABBREV.sub(lambda m: m.group(1) + ANSWER_DOT, text)
+    return [part.replace(ANSWER_DOT, ".") for part in sentences(protected)]
+
+
 class Pipeline:
     def __init__(self, weights=None, judge=None, retriever=None, llm=None):
         self.llm = llm or LLM()
@@ -491,13 +545,11 @@ class Pipeline:
     def answer(self, query):
         t0 = time.time()
         docs = self.retriever.retrieve(query)
-        ctx = "\n\n".join(f"[{d['doc_name']} | {d['issue_date']} | {d['ref_number']}]\n{d['text'][:ANSWER_CTX_CHAR]}" for d in docs)
-        prompt = (f"You are the NIT Jamshedpur academic assistant. Use only the context.\n"
-                  f"Current date: {date.today().isoformat()}\n\nContext:\n{ctx}\n\n"
-                  f"Question: {query}\nAnswer in at most three sentences. If the context does not contain the answer, say you do not know.")
+        ctx = context_block(docs, self.retriever.by_id)
+        prompt = answer_prompt(query, ctx)
         draft = self.llm.call(prompt, temperature=0.0, num_predict=DRAFT_NUM_PREDICT)
         claims = []
-        for s in sentences(draft):
+        for s in answer_sentences(draft):
             if len(s.split()) < UNSUP_CLAIM_MIN_WORDS:
                 continue
             claims.append(self.verify(s.rstrip(".")))

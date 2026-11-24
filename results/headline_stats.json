@@ -1,30 +1,30 @@
 {
-  "n_scored": 71,
+  "n_scored": 91,
   "n_excluded_generated": 38,
   "label_counts": {
-    "true": 36,
-    "false": 35,
+    "true": 45,
+    "false": 46,
     "unverifiable": 0
   },
   "mcnemar_d_vs_b": {
-    "d_better": 13,
+    "d_better": 12,
     "b_better": 4,
-    "p_value": 0.052345
+    "p_value": 0.080118
   },
   "bootstrap_d_minus_b": {
-    "delta": 0.1255,
-    "ci_low": 0.0141,
-    "ci_high": 0.2394
+    "delta": 0.0883,
+    "ci_low": 0.0,
+    "ci_high": 0.1758
   },
   "confusion_d": [
     [
-      31,
-      4,
-      1
+      41,
+      2,
+      2
     ],
     [
-      1,
-      32,
+      3,
+      41,
       2
     ],
     [
@@ -33,6 +33,6 @@
       0
     ]
   ],
-  "brier_d": 0.0751,
+  "brier_d": 0.0827,
   "judge_backend": "nli"
 }

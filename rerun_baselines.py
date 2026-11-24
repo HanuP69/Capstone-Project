@@ -104,7 +104,9 @@ def main():
             save(frame, args.output, meta, args.metadata)
             print(f"{count}/{len(pending)} elapsed={meta['elapsed_seconds']}s", flush=True)
 
-    meta["claims_completed"] = len(pending)
+    # Count every row already carrying this baseline version, so rerunning when
+    # nothing is pending does not clobber the metadata back to zero.
+    meta["claims_completed"] = int((frame["baseline_prompt"] == VERSION).sum())
     meta["elapsed_seconds"] = round(time.time() - started, 1)
     meta["completed_at"] = datetime.now(timezone.utc).isoformat()
     save(frame, args.output, meta, args.metadata)
