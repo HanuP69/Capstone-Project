@@ -26,9 +26,7 @@ venv/
 **/venv/
 env/
 **/env/
-node_modules/
-.vite/
-coverage/
+
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
