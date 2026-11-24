@@ -7,7 +7,7 @@ import numpy as np
 import ollama
 from rank_bm25 import BM25Okapi
 
-from config import DATA, EMB_MODEL, ROOT
+from config import CHROMA_ADD_BATCH, DATA, EMB_MODEL, EMBED_BATCH, EMBED_CHAR_LIMIT, ROOT
 from pipeline_text import tokenize
 
 INDEX_DIR = ROOT / "index"
@@ -20,9 +20,9 @@ def load_chunks():
 
 def embed(texts, prefix):
     out = []
-    batch = 32
+    batch = EMBED_BATCH
     for i in range(0, len(texts), batch):
-        part = [f"{prefix}: {t[:6000]}" for t in texts[i:i + batch]]
+        part = [f"{prefix}: {t[:EMBED_CHAR_LIMIT]}" for t in texts[i:i + batch]]
         res = ollama.embed(model=EMB_MODEL, input=part)
         out.extend(res["embeddings"])
         if (i // batch) % 10 == 0:
@@ -59,7 +59,7 @@ def main():
         "is_latest": int(c["is_latest"]),
         "n_words": int(c["n_words"]),
     } for c in chunks]
-    for i in range(0, len(ids), 400):
+    for i in range(0, len(ids), CHROMA_ADD_BATCH):
         col.add(ids=ids[i:i + 400], embeddings=embs[i:i + 400].tolist(),
                 documents=docs[i:i + 400], metadatas=metas[i:i + 400])
     print("chroma count", col.count(), flush=True)

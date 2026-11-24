@@ -12,9 +12,15 @@ import numpy as np
 import ollama
 from rank_bm25 import BM25Okapi
 
-from config import (CACHE, DATA, DEFAULT_WEIGHTS, DENSE_WEIGHT, EMB_MODEL, FACT_BLOCK, FACT_PASS,
-                    GEN_MODEL, GROUND_PENALTY, JUDGE_TOP, NLI_MODEL, RECENCY_LAMBDA, RERANK_MODEL,
-                    RERANK_TOP, RETRIEVE_K, ROOT, RRF_K, SEED, SPARSE_WEIGHT)
+from config import (ANSWER_CTX_CHAR, ANSWER_NUM_PREDICT, ATOMIC_MIN_PART_WORDS, BEST_SENT_MIN_WORDS,
+                    CACHE, DATA, DEFAULT_WEIGHTS, DENSE_WEIGHT, DRAFT_NUM_PREDICT, EMBED_BATCH,
+                    EMBED_CHAR_LIMIT, EVIDENCE_CHAR_LIMIT, EVIDENCE_SNIPPET_CHAR, FACT_BLOCK,
+                    FACT_PASS, GEN_MODEL, GROUND_PENALTY, JUDGE_LLM_NUM_PREDICT, JUDGE_TOP,
+                    LLM_CTX_CHAR, LLM_NUM_CTX, LLM_NUM_PREDICT, LLM_TEMPERATURE,
+                    MAX_ENTAIL_FOR_UNSUPPORTED, NLI_MODEL, NUMERIC_TOL_MONEY, NUMERIC_TOL_PCT,
+                    OVERLAP_GATE, RECENCY_DEFAULT_AGE, RECENCY_LAMBDA, REGEN_NUM_PREDICT,
+                    REGEN_ROUNDS, REGEN_TEMPERATURE, RERANK_CHAR_LIMIT, RERANK_MODEL, RERANK_TOP,
+                    RETRIEVE_K, ROOT, RRF_K, SEED, SPARSE_WEIGHT, WIDE_SENT_LIMIT)
 from pipeline_text import (age_years, entities, overlap_terms, parse_dates, parse_money,
                            parse_percent, sentences, tokenize)
 
@@ -77,14 +83,14 @@ class LLM:
         self.model = model
         self.cache = cache or Cache()
 
-    def call(self, prompt, temperature=0.0, num_predict=220, seed=SEED):
+    def call(self, prompt, temperature=LLM_TEMPERATURE, num_predict=LLM_NUM_PREDICT, seed=SEED):
         k = self.cache.key(self.model, prompt, temperature, num_predict, seed)
         hit = self.cache.get(k)
         if hit is not None:
             return hit
         res = ollama.chat(model=self.model, messages=[{"role": "user", "content": prompt}],
                           options={"temperature": temperature, "num_predict": num_predict,
-                                   "seed": seed, "num_ctx": 4096}, think=False)
+                                   "seed": seed, "num_ctx": LLM_NUM_CTX}, think=False)
         text = (res.message.content or "").strip()
         if not text:
             raise RuntimeError("empty generation")
@@ -93,8 +99,8 @@ class LLM:
 
     def embed(self, texts):
         out = []
-        for i in range(0, len(texts), 32):
-            part = [f"search_query: {t[:6000]}" for t in texts[i:i + 32]]
+        for i in range(0, len(texts), EMBED_BATCH):
+            part = [f"search_query: {t[:EMBED_CHAR_LIMIT]}" for t in texts[i:i + EMBED_BATCH]]
             res = ollama.embed(model=EMB_MODEL, input=part)
             out.extend(res["embeddings"])
         arr = np.array(out, dtype=np.float32)
@@ -132,7 +138,7 @@ class Judge:
     def entail(self, claim, evidence):
         if not evidence:
             return 0.0, 0.0, "nli"
-        pairs = [(e["text"][:1800], claim) for e in evidence]
+        pairs = [(e["text"][:EVIDENCE_CHAR_LIMIT], claim) for e in evidence]
         scored = self.probs(pairs)
         if scored is None:
             ent, contra = self._llm_judge(claim, evidence)
@@ -142,13 +148,13 @@ class Judge:
         return best[0]["entail"], contra, "nli"
 
     def _llm_judge(self, claim, evidence):
-        ctx = "\n\n".join(f"Passage {i + 1}: {e['text'][:700]}" for i, e in enumerate(evidence[:3]))
+        ctx = "\n\n".join(f"Passage {i + 1}: {e['text'][:LLM_CTX_CHAR]}" for i, e in enumerate(evidence[:3]))
         prompt = (f"Passages are excerpts from different NIT Jamshedpur notices. A claim is supported when at least one "
                   f"passage states it, even if other passages are about a different semester, year or department.\n\n{ctx}\n\n"
                   f"Claim: {claim}\n\n"
                   f"Answer with one word only: SUPPORTED if a passage states the claim, CONTRADICTED if a passage states a "
                   f"different value for the same fact, or NEUTRAL if no passage addresses it.")
-        out = self.llm.call(prompt, temperature=0.0, num_predict=8).upper()
+        out = self.llm.call(prompt, temperature=0.0, num_predict=JUDGE_LLM_NUM_PREDICT).upper()
         if "CONTRADICT" in out:
             return 0.0, 1.0
         if "SUPPORT" in out:
@@ -168,7 +174,7 @@ class Reranker:
     def score(self, query, docs):
         if self.model is None or not docs:
             return [0.0] * len(docs)
-        return [float(x) for x in self.model.predict([(query, d["text"][:1500]) for d in docs])]
+        return [float(x) for x in self.model.predict([(query, d["text"][:RERANK_CHAR_LIMIT]) for d in docs])]
 
 
 class Retriever:
@@ -209,7 +215,7 @@ class Retriever:
             for row in lst:
                 cid = row["chunk_id"]
                 chunk = self.by_id.get(cid, {})
-                age = age_years(chunk.get("issue_date", "")) or 3.0
+                age = age_years(chunk.get("issue_date", "")) or RECENCY_DEFAULT_AGE
                 recency = 0.55 + 0.45 * float(np.exp(-RECENCY_LAMBDA * age))
                 fused[cid] = fused.get(cid, 0.0) + w * recency / (RRF_K + row["rank"])
         ranked = sorted(fused.items(), key=lambda x: -x[1])[:max(k, RERANK_TOP * 3)]
@@ -227,12 +233,12 @@ class Retriever:
             docs = [{**d, "rerank": s} for d, s in docs]
         return docs
 
-    def best_sentences(self, claim, docs, limit=3):
+    def best_sentences(self, claim, docs, limit=JUDGE_TOP):
         ct = tokenize(claim)
         scored = []
         for d in docs:
             for s in sentences(d["text"]):
-                if len(s.split()) < 6:
+                if len(s.split()) < BEST_SENT_MIN_WORDS:
                     continue
                 ov = overlap_terms(claim, s)
                 if ov <= 0:
@@ -254,7 +260,7 @@ class Retriever:
 
 
 class NumericCheck:
-    def __init__(self, tol_money=0.02, tol_pct=0.1, records=None):
+    def __init__(self, tol_money=NUMERIC_TOL_MONEY, tol_pct=NUMERIC_TOL_PCT, records=None):
         self.tol_money = tol_money
         self.tol_pct = tol_pct
         self.records = records or []
@@ -299,7 +305,7 @@ class NumericCheck:
         kinds = [k for k in ("money", "percent", "dates") if ce[k]]
         best = None
         for es in evidence_sentences:
-            if overlap_terms(claim, es["text"]) < 0.5:
+            if overlap_terms(claim, es["text"]) < OVERLAP_GATE:
                 continue
             ee = entities(es["text"])
             hits = 0
@@ -402,7 +408,7 @@ class Pipeline:
     def verify(self, claim, weights=None):
         gate = Gate(weights=weights) if weights else self.gate
         parts = [p.strip() for p in re.split(r",\s*and\s+|;\s*and\s+", claim) if p.strip()]
-        if len(parts) >= 2 and all(len(p.split()) >= 6 for p in parts):
+        if len(parts) >= 2 and all(len(p.split()) >= ATOMIC_MIN_PART_WORDS for p in parts):
             subs = [self.verify(p, weights=weights) for p in parts]
             F = min(s.F for s in subs)
             P = min(s.P for s in subs)
@@ -428,7 +434,7 @@ class Pipeline:
                 evidence=dedup[:6], judge_backend=subs[0].judge_backend)
         docs = self.retriever.retrieve(claim)
         ev = self.retriever.best_sentences(claim, docs, limit=JUDGE_TOP)
-        wide = self.retriever.best_sentences(claim, docs, limit=8)
+        wide = self.retriever.best_sentences(claim, docs, limit=WIDE_SENT_LIMIT)
         ce = entities(claim)
         fnum, fnote = self.numeric.compare(claim, wide or ev)
         ent, contra, backend = self.judge.entail(claim, ev or docs[:2])
@@ -440,17 +446,17 @@ class Pipeline:
             F=round(fnum, 3), P=round(P, 3), D=round(D, 3), C=round(float(contra), 3), G=round(G, 3),
             decision=decision, label=label, fact_note=fnote, policy_note=pnote,
             evidence=[{"doc_name": e["doc_name"], "chunk_id": e["chunk_id"],
-                       "date": e["issue_date"], "text": e["text"][:300]} for e in ev],
+                       "date": e["issue_date"], "text": e["text"][:EVIDENCE_SNIPPET_CHAR]} for e in ev],
             judge_backend=backend)
 
     def answer(self, query):
         t0 = time.time()
         docs = self.retriever.retrieve(query)
-        ctx = "\n\n".join(f"[{d['doc_name']} | {d['issue_date']} | {d['ref_number']}]\n{d['text'][:1200]}" for d in docs)
+        ctx = "\n\n".join(f"[{d['doc_name']} | {d['issue_date']} | {d['ref_number']}]\n{d['text'][:ANSWER_CTX_CHAR]}" for d in docs)
         prompt = (f"You are the NIT Jamshedpur academic assistant. Use only the context.\n"
                   f"Current date: {date.today().isoformat()}\n\nContext:\n{ctx}\n\n"
                   f"Question: {query}\nAnswer in at most three sentences. If the context does not contain the answer, say you do not know.")
-        draft = self.llm.call(prompt, temperature=0.0, num_predict=240)
+        draft = self.llm.call(prompt, temperature=0.0, num_predict=DRAFT_NUM_PREDICT)
         claims = []
         for s in sentences(draft):
             if len(s.split()) < 5:
@@ -462,12 +468,12 @@ class Pipeline:
                 kept.append(c)
                 continue
             cur = c
-            for _ in range(2):
-                evtext = "\n".join(e["text"][:300] for e in cur.evidence)
+            for _ in range(REGEN_ROUNDS):
+                evtext = "\n".join(e["text"][:EVIDENCE_SNIPPET_CHAR] for e in cur.evidence)
                 rw = self.llm.call(
                     f"Rewrite the following claim as ONE factual sentence using only the evidence. "
                     f"If the evidence does not support any version, reply UNVERIFIABLE.\n"
-                    f"Claim: {cur.claim}\nEvidence:\n{evtext}\nRewrite:", 0.2, 120)
+                    f"Claim: {cur.claim}\nEvidence:\n{evtext}\nRewrite:", REGEN_TEMPERATURE, REGEN_NUM_PREDICT)
                 rw = rw.strip().splitlines()[0].strip() if rw.strip() else ""
                 if not rw or "unverifiable" in rw.lower():
                     break

@@ -9,7 +9,11 @@ import pandas as pd
 from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score,
                              precision_score, recall_score)
 
-from config import DATA, RESULTS, SEED
+from config import (ABSENCE_ENTAIL_THRESHOLD, ANSWER_NUM_PREDICT, BASELINE_NUM_PREDICT,
+                    BOOTSTRAP_N, CALIBRATION_BINS, CONTEXT_CHAR, CONTEXT_DOCS, DATA, D_ONLY_FAIL,
+                    D_ONLY_PASS, FACT_BLOCK, FACT_PASS, G_ONLY_FAIL, G_ONLY_PASS, RESULTS, SEED,
+                    UNSUP_CLAIM_MIN_WORDS, UNSUP_CTX_CHAR, UNSUP_ENTAIL_THRESHOLD,
+                    UNSUP_EVIDENCE_CHAR, UNSUP_NUM_PREDICT, UNSUP_SAMPLES)
 from pipeline import (JUDGE_TOP, Pipeline, RERANK_TOP, RETRIEVE_K, RRF_K,
                       Cache, LLM)
 from pipeline_text import sentences, tokenize
@@ -31,8 +35,8 @@ def load_claims():
     return rows
 
 
-def context_of(docs, n=4):
-    return "\n\n".join(f"[{d['doc_name']} | {d['issue_date']} | {d['ref_number']}] {d['text'][:900]}" for d in docs[:n])
+def context_of(docs, n=CONTEXT_DOCS):
+    return "\n\n".join(f"[{d['doc_name']} | {d['issue_date']} | {d['ref_number']}] {d['text'][:CONTEXT_CHAR]}" for d in docs[:n])
 
 
 def run_conditions(claims, use_llm=True, split=None):
@@ -47,15 +51,15 @@ def run_conditions(claims, use_llm=True, split=None):
         claim = c["claim"]
         label = c["label"]
         docs = pipe.retriever.retrieve(claim)
-        ctx = context_of(docs, 4)
+        ctx = context_of(docs, CONTEXT_DOCS)
         t_a = time.time()
-        a = llm.call(f"Question: Is the following claim true? {claim}\nAnswer YES or NO only.", 0.0, 10) if use_llm else "UNVERIFIABLE"
+        a = llm.call(f"Question: Is the following claim true? {claim}\nAnswer YES or NO only.", 0.0, BASELINE_NUM_PREDICT) if use_llm else "UNVERIFIABLE"
         lat_a = time.time() - t_a
         t_b = time.time()
-        b = llm.call(f"Context:\n{ctx}\n\nClaim: {claim}\nIs the claim supported by the context? Answer YES or NO only.", 0.0, 10) if use_llm else "UNVERIFIABLE"
+        b = llm.call(f"Context:\n{ctx}\n\nClaim: {claim}\nIs the claim supported by the context? Answer YES or NO only.", 0.0, BASELINE_NUM_PREDICT) if use_llm else "UNVERIFIABLE"
         lat_b = time.time() - t_b
         t_c = time.time()
-        samples = [llm.call(f"Context:\n{ctx}\n\nClaim: {claim}\nIs the claim supported? Answer YES or NO only.", 0.7, 10) for _ in range(3)] if use_llm else ["UNVERIFIABLE"]
+        samples = [llm.call(f"Context:\n{ctx}\n\nClaim: {claim}\nIs the claim supported? Answer YES or NO only.", 0.7, BASELINE_NUM_PREDICT) for _ in range(UNSUP_SAMPLES)] if use_llm else ["UNVERIFIABLE"]
         c_ans = max(set(samples), key=samples.count) if samples else "UNVERIFIABLE"
         lat_c = time.time() - t_c
         t_d = time.time()
@@ -126,7 +130,7 @@ def mcnemar(pred_a, pred_b, truth):
     return {"d_better": n10, "b_better": n01, "p_value": round(p, 6)}
 
 
-def bootstrap_delta(pred_a, pred_b, truth, n=2000, seed=SEED):
+def bootstrap_delta(pred_a, pred_b, truth, n=BOOTSTRAP_N, seed=SEED):
     a = (pred_a == truth).astype(int).values if hasattr(pred_a, "values") else np.array(pred_a == truth, dtype=int)
     b = (pred_b == truth).astype(int).values if hasattr(pred_b, "values") else np.array(pred_b == truth, dtype=int)
     rng = np.random.default_rng(seed)
@@ -145,11 +149,11 @@ def absence_audit(test_df, pipe):
     aud = []
     for r in test_df[test_df["label"] == "unverifiable"].itertuples():
         docs = pipe.retriever.retrieve(r.claim)
-        ev = pipe.retriever.best_sentences(r.claim, docs, 4)
+        ev = pipe.retriever.best_sentences(r.claim, docs, CONTEXT_DOCS)
         ent, contra, _ = pipe.judge.entail(r.claim, ev or docs[:2])
         aud.append({"claim_id": r.claim_id, "max_entail": round(float(ent), 3), "contra": round(float(contra), 3)})
     a = pd.DataFrame(aud)
-    contaminated = int((a["max_entail"] >= 0.6).sum()) if len(a) else 0
+    contaminated = int((a["max_entail"] >= ABSENCE_ENTAIL_THRESHOLD).sum()) if len(a) else 0
     return a, contaminated
 
 
@@ -163,7 +167,7 @@ def brier_score(df):
     return round(float(np.mean((d - y) ** 2)), 4)
 
 
-def calibration_bins(df, n_bins=10):
+def calibration_bins(df, n_bins=CALIBRATION_BINS):
     sub = df[df["label"].isin(["true", "false"])].copy()
     if len(sub) == 0:
         return []
@@ -185,14 +189,14 @@ def ablation(df):
     # cascade (current)
     rules["cascade"] = df["pred_d"].tolist()
     # D-only
-    rules["d_only"] = ["true" if d >= 0.6 else "false" if d < 0.4 else "unverifiable" for d in df["D"]]
+    rules["d_only"] = ["true" if d >= D_ONLY_PASS else "false" if d < D_ONLY_FAIL else "unverifiable" for d in df["D"]]
     # F-only
-    rules["f_only"] = ["true" if f >= 0.95 else "false" if f <= 0.05 else "unverifiable" for f in df["F"]]
+    rules["f_only"] = ["true" if f >= FACT_PASS else "false" if f <= FACT_BLOCK else "unverifiable" for f in df["F"]]
     # P-only
-    rules["p_only"] = ["true" if p >= 0.95 else "false" if p <= 0.05 else "unverifiable" for p in df["P"]]
+    rules["p_only"] = ["true" if p >= FACT_PASS else "false" if p <= FACT_BLOCK else "unverifiable" for p in df["P"]]
     # G-only (using score as single threshold)
     g = df["G"].astype(float).values
-    rules["g_only"] = ["true" if v >= 0.6 else "false" if v < 0.4 else "unverifiable" for v in g]
+    rules["g_only"] = ["true" if v >= G_ONLY_PASS else "false" if v < G_ONLY_FAIL else "unverifiable" for v in g]
     rows = []
     for name, preds in rules.items():
         acc = accuracy_score(y, preds)
@@ -208,30 +212,30 @@ def unsupervised(pipe, judge, conditions):
     rows = []
     for q in QUERIES:
         docs = pipe.retriever.retrieve(q)
-        ctx = context_of(docs, 4)
-        evidence = [{"text": d["text"][:1500], "doc_name": d["doc_name"]} for d in docs[:4]]
+        ctx = context_of(docs, CONTEXT_DOCS)
+        evidence = [{"text": d["text"][:UNSUP_EVIDENCE_CHAR], "doc_name": d["doc_name"]} for d in docs[:CONTEXT_DOCS]]
         answers = {}
-        answers["A"] = pipe.llm.call(f"Question: {q}\nAnswer in at most three sentences.", 0.0, 200)
-        answers["B"] = pipe.llm.call(f"Context:\n{ctx}\n\nQuestion: {q}\nAnswer in at most three sentences using only the context.", 0.0, 200)
-        samples = [pipe.llm.call(f"Question: {q}\nAnswer in at most three sentences.", 0.7, 200) for _ in range(3)]
+        answers["A"] = pipe.llm.call(f"Question: {q}\nAnswer in at most three sentences.", 0.0, UNSUP_NUM_PREDICT)
+        answers["B"] = pipe.llm.call(f"Context:\n{ctx}\n\nQuestion: {q}\nAnswer in at most three sentences using only the context.", 0.0, UNSUP_NUM_PREDICT)
+        samples = [pipe.llm.call(f"Question: {q}\nAnswer in at most three sentences.", 0.7, UNSUP_NUM_PREDICT) for _ in range(UNSUP_SAMPLES)]
         answers["D"] = pipe.answer(q).answer
         answers["C"] = max(samples, key=lambda s: sum(len(set(tokenize(s)) & set(tokenize(x))) for x in samples))
         # RAG triad components
         ctx_rel = []
-        for d in docs[:4]:
-            e, c, _ = judge.entail(q, [{"text": d["text"][:500], "doc_name": d["doc_name"]}])
+        for d in docs[:CONTEXT_DOCS]:
+            e, c, _ = judge.entail(q, [{"text": d["text"][:UNSUP_CTX_CHAR], "doc_name": d["doc_name"]}])
             ctx_rel.append(float(e))
         for cond, txt in answers.items():
-            cl = [s for s in sentences(txt) if len(s.split()) >= 5]
+            cl = [s for s in sentences(txt) if len(s.split()) >= UNSUP_CLAIM_MIN_WORDS]
             unsupported = 0
             for s in cl:
                 ent, contra, _ = judge.entail(s, evidence)
-                if ent < 0.5:
+                if ent < UNSUP_ENTAIL_THRESHOLD:
                     unsupported += 1
             # answer relevance
             ar_ent, _, _ = judge.entail(txt, [{"text": q, "doc_name": "query"}]) if False else (0.0, 0.0, "")
             try:
-                ar_ent, _, _ = judge.entail(q, [{"text": txt[:500], "doc_name": "answer"}])
+                ar_ent, _, _ = judge.entail(q, [{"text": txt[:UNSUP_CTX_CHAR], "doc_name": "answer"}])
             except Exception:
                 ar_ent = 0.0
             rows.append({"query": q, "condition": cond, "answer": txt, "n_claims": len(cl),
@@ -293,11 +297,11 @@ def main():
                 preds = []
                 for r in tmp.itertuples():
                     F, P, D, C = r.F, r.P, r.D, r.C
-                    if F <= 0.05:
+                    if F <= FACT_BLOCK:
                         lab = "false"
-                    elif P <= 0.05:
+                    elif P <= FACT_BLOCK:
                         lab = "false"
-                    elif F >= 0.95:
+                    elif F >= FACT_PASS:
                         lab = "true"
                     elif C >= tc:
                         lab = "false"
@@ -322,7 +326,7 @@ def main():
         pipe = Pipeline()
         audit, contaminated = absence_audit(test, pipe)
         audit.to_csv(RESULTS / "absence_audit.csv", index=False)
-        mask = (test["label"] == "unverifiable") & test["claim_id"].isin(audit[audit["max_entail"] >= 0.6]["claim_id"])
+        mask = (test["label"] == "unverifiable") & test["claim_id"].isin(audit[audit["max_entail"] >= ABSENCE_ENTAIL_THRESHOLD]["claim_id"])
         clean = test[~mask].copy()
         clean.to_csv(RESULTS / "test_scored.csv", index=False)
 

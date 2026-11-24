@@ -5,7 +5,7 @@ import re
 from collections import defaultdict
 from datetime import date, timedelta
 
-from config import CLAIMS_PER_LABEL, DATA, SEED, SPLIT_DEV
+from config import CLAIMS_PER_LABEL, CLAIM_SENT_MAX_WORDS, CLAIM_SENT_MIN_WORDS, DATA, SEED, SPLIT_DEV
 from pipeline_text import entities, parse_dates, sentences
 
 BOILER = re.compile(
@@ -50,7 +50,7 @@ def pick_sentences(chunks):
         for raw in sentences(c["text"]):
             s = clean(raw)
             w = s.split()
-            if not (12 <= len(w) <= 42):
+            if not (CLAIM_SENT_MIN_WORDS <= len(w) <= CLAIM_SENT_MAX_WORDS):
                 continue
             if BOILER.search(s) or not POLICY.search(s):
                 continue

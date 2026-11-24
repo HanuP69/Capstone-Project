@@ -7,7 +7,7 @@ from datetime import date
 
 import fitz
 
-from config import CHUNK_OVERLAP_SENTENCES, CHUNK_WORDS, DATA, DOCS, MIN_CHUNK_WORDS, PDF_TARGET, TABLE_MAX_WORDS
+from config import CHUNK_OVERLAP_SENTENCES, CHUNK_WORDS, DATA, DOCS, INGEST_CLASSIFY_LIMIT, INGEST_HEAD_LIMIT, INGEST_REF_LIMIT, INGEST_SESSION_LIMIT, MIN_CHUNK_WORDS, PDF_TARGET, TABLE_MAX_WORDS
 
 MONTHS = {m: i for i, m in enumerate(
     ["january", "february", "march", "april", "may", "june", "july",
@@ -70,7 +70,7 @@ def norm_ws(text):
 
 
 def parse_date(text):
-    head = text[:6000]
+    head = text[:INGEST_HEAD_LIMIT]
     m = DATE_NUM.search(head)
     if m:
         d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
@@ -98,7 +98,7 @@ def parse_date(text):
 
 
 def parse_ref(text, name):
-    head = text[:2500]
+    head = text[:INGEST_REF_LIMIT]
     for pat in REF_PATTERNS:
         m = pat.search(head)
         if m:
@@ -110,7 +110,7 @@ def parse_ref(text, name):
 
 
 def parse_session(text):
-    m = SESSION.search(text[:3000])
+    m = SESSION.search(text[:INGEST_SESSION_LIMIT])
     if not m:
         return ""
     a, b = m.group(1), m.group(2)
@@ -120,7 +120,7 @@ def parse_session(text):
 
 
 def classify(text, name):
-    low = (text[:4000] + " " + name).lower()
+    low = (text[:INGEST_CLASSIFY_LIMIT] + " " + name).lower()
     scores = {k: sum(low.count(h) for h in hints) for k, hints in CATEGORY_HINTS.items()}
     best = max(scores, key=scores.get)
     return best if scores[best] > 0 else "General"
