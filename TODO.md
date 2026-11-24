@@ -11,7 +11,7 @@ The real-corpus evaluation is unsupervised by design. A supervised version needs
 Until that exists, the headline remains constructed-label accuracy on real-chunk claims, not a human-verified accuracy.
 
 ## Corpus
-- `documents/` contains 2241 PDFs; `select_corpus.py` filters them to a pool of 463 and selects 180. Extending to every text-bearing PDF requires changing the selection quotas in `select_corpus.py` or bypassing `data/selection.json`; it is not only a configuration change.
+- `documents/` contains 2241 PDFs; `select_corpus.py` filters them to a pool of 463 and all 463 are ingested (`PDF_TARGET=463`). Extending to every text-bearing PDF requires changing the selection quotas in `select_corpus.py` or bypassing `data/selection.json`; it is not only a configuration change.
 - PDFs without a text layer still need OCR before ingestion.
 - Date metadata is noisy. The fallback-date share is not reported as a single number here because the previous two figures contradicted each other; use `data/corpus_stats.json` and `data/quality_audit.csv` as the source of truth.
 - Very wide tables can still lose column alignment when split at the table word limit.
@@ -26,7 +26,7 @@ Until that exists, the headline remains constructed-label accuracy on real-chunk
 - `use_meta_learner` is not part of the API. Weights are fixed and normalised per request; the response says `fixed_weights`.
 
 ## Evaluation
-- Claims are single-fact perturbations, verbatim sentences, and concatenated multi-fact claims. A fragment filter exists now, but the source-backed test set still contains 47 fragmentary claims; future runs will reject them at construction time.
+- Claims are single-fact perturbations, verbatim sentences, and concatenated multi-fact claims. A fragment filter exists and rejects them at construction time: the source-backed test set currently contains 0 fragmentary claims (`results/quality_audit.csv`).
 - Multi-fact performance is reported in `results/subgroup_metrics.csv`; atomic decomposition is a heuristic split on `, and` / `; and`, not a parser.
 - A/B/C predictions were rerun with three-way TRUE/FALSE/UNVERIFIABLE prompts. `results/baseline_rerun.json` records the model, seed, sample count and prompt hashes.
 - The 38 test unverifiable claims are model-generated and filtered by the same NLI judge used for scoring. They are audited in `results/quality_audit.csv` and excluded from the source-backed headline; replacing them needs human-written absent questions.

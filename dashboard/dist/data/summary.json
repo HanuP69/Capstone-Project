@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-25T00:17:53",
+  "generated_at": "2026-11-25T01:05:33",
   "dataset_mode": "Source-backed NITJ circular claims \u00b7 generated probes excluded \u00b7 no synthetic benchmark",
   "corpus": {
     "pdfs_total": 2241,
@@ -29,38 +29,38 @@
     ]
   },
   "split": {
-    "total": 233,
-    "constructed_claims": 153,
+    "total": 230,
+    "constructed_claims": 150,
     "absent_claims": 80,
-    "dev_docs": 21,
-    "test_docs": 21,
-    "dev_claims": 124,
-    "test_claims": 109,
+    "dev_docs": 19,
+    "test_docs": 26,
+    "dev_claims": 101,
+    "test_claims": 129,
     "dev_absent": 42,
     "test_absent": 38,
-    "source_dev_claims": 82,
-    "source_test_claims": 71,
+    "source_dev_claims": 59,
+    "source_test_claims": 91,
     "labels": {
-      "true": 78,
+      "true": 75,
       "false": 75,
       "unverifiable": 80
     },
     "methods": {
       "verbatim": 60,
-      "perturbed_money": 4,
-      "perturbed_percent": 21,
-      "perturbed_date": 31,
+      "perturbed_percent": 16,
+      "perturbed_date": 33,
+      "perturbed_money": 7,
       "perturbed_days": 4,
-      "multi_fact_verbatim": 18,
+      "multi_fact_verbatim": 15,
       "multi_fact_perturbed": 15,
       "generated_absent": 80
     },
     "categories": {
-      "Circulars": 52,
-      "Syllabus Queries": 18,
-      "Exam Dates": 42,
-      "Hostel Rules": 24,
-      "Fee Deadlines": 17,
+      "Circulars": 68,
+      "Syllabus Queries": 16,
+      "Fee Deadlines": 33,
+      "Hostel Rules": 20,
+      "Exam Dates": 13,
       "Unsupported": 80
     }
   },
@@ -542,36 +542,15 @@
         "minimum attendance",
         "attendance requirement"
       ],
-      "support": 3,
+      "support": 4,
       "candidates": [
         75.0
       ],
-      "source_chunk_id": "c00065",
+      "source_chunk_id": "c00253",
       "source_doc": "notices_5481.pdf",
       "source_date": "2023-08-02",
       "source_phrase": "minimum attendance",
       "evidence": "endance in classes etc. are given in Appendix II. \u201cAppendix II: In any case the minimum attendance in order to make the student eligible to appear in end semester examination should not fall below 75%. However, in certain cases due to compelling reason like serious illness of his / her, or natural calamity or death case in"
-    },
-    {
-      "key": "late_registration_fee",
-      "description": "Late semester registration fee",
-      "value": 1000.0,
-      "operator": "=",
-      "val_type": "currency",
-      "aliases": [
-        "late registration fee",
-        "late fee",
-        "late fine"
-      ],
-      "support": 3,
-      "candidates": [
-        1000.0
-      ],
-      "source_chunk_id": "c00096",
-      "source_doc": "notices_5572.pdf",
-      "source_date": "2023-09-04",
-      "source_phrase": "late fine",
-      "evidence": "ster registration only by physical reporting of the student. ii) Allowed with a late fine of Rs. 1000/- on students who have paid the semester fee on or before 13.08.2023 but not completed their semester registrations in person. iii) Allowed with a late fine of Rs. 2000/- on students who have neither paid the semester fee nor completed th"
     },
     {
       "key": "btech_total_fee",
@@ -588,7 +567,7 @@
         79000.0,
         106500.0
       ],
-      "source_chunk_id": "c00023",
+      "source_chunk_id": "c00150",
       "source_doc": "dean_office_notices_19.pdf",
       "source_date": "2025-08-18",
       "source_phrase": "Total Fee (Tuition Fee",
@@ -603,15 +582,15 @@
       "aliases": [
         "hostel fee"
       ],
-      "support": 7,
+      "support": 8,
       "candidates": [
         15000.0
       ],
-      "source_chunk_id": "c00485",
-      "source_doc": "notices_6404.pdf",
-      "source_date": "2024-08-17",
+      "source_chunk_id": "c00452",
+      "source_doc": "notices_5577.pdf",
+      "source_date": "2023-09-08",
       "source_phrase": "hostel fee",
-      "evidence": "ll not be allowed to take meals in any other dining hall. 4. Student has to Pay Hostel Fee (Rs. 15000/-) and Mess Fee (Rs.18000/-) for first semester before wish to opt hostel and mess, they can approach to chief warden office. 6. Student has to take print and submit Hostel Admission form (Attached in last page) along with 02 passport siz"
+      "evidence": " and OBC Category) | | --- | --- | | | Rs. 22500/- (for SC/ST/PH Category) | | Hostel Fee* | RS. 15000/- | | Mess Fee* | Rs. 17000/- |"
     }
   ],
   "claims": [
