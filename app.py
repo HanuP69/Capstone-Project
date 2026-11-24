@@ -17,7 +17,7 @@ app = FastAPI(title="NITJ Groundedness Verification", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(","),
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
@@ -118,3 +118,44 @@ def records():
     if not path.exists():
         raise HTTPException(status_code=503, detail="records.json missing")
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _claim_to_api(c, idx):
+    ctxs = []
+    for e in (c.evidence or []):
+        if isinstance(e, dict):
+            ctxs.append(f"[{e.get('doc_name', '')} | {e.get('date', '')}] {e.get('text', '')}")
+        else:
+            ctxs.append(str(e))
+    if not ctxs and c.fact_note:
+        ctxs.append(c.fact_note)
+    return {
+        "claim_id": f"claim-{idx}", "claim_text": c.claim, "category": c.category,
+        "F_score": c.F, "P_score": c.P, "D_score": c.D, "G_score": c.G,
+        "decision": c.decision, "predicted_label": c.label,
+        "fact_explanation": c.fact_note, "policy_explanation": c.policy_note,
+        "retrieved_contexts": ctxs, "regenerated_claim": (c.regen or None),
+        "weighting_mode": "meta_learner_mle", "retrieval_method": "hybrid_rrf",
+        "is_synthetic_benchmark": False,
+    }
+
+
+@app.post("/api/verify-query")
+def verify_query(req: QueryIn):
+    try:
+        res = get_pipeline().answer(req.query)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+    claims = [_claim_to_api(c, i) for i, c in enumerate(res.claims)]
+    g_scores = [c["G_score"] for c in claims]
+    overall = (sum(g_scores) / len(g_scores)) if g_scores else 0.0
+    return {
+        "query": res.query, "draft_response": res.draft,
+        "final_grounded_answer": res.answer, "overall_groundedness": round(overall, 4),
+        "total_claims": len(claims),
+        "passed_claims": sum(1 for c in claims if c["decision"] == "PASS"),
+        "flagged_claims": sum(1 for c in claims if c["decision"] == "FLAG"),
+        "blocked_claims": sum(1 for c in claims if c["decision"] == "BLOCK"),
+        "latency_seconds": res.latency, "claims": claims,
+        "dataset_mode": "Live pipeline — NIT Jamshedpur circulars",
+    }
