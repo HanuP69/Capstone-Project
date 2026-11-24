@@ -1,28 +1,36 @@
 {
-  "total": 153,
-  "dev_docs": 83,
-  "test_docs": 84,
-  "dev_claims": 82,
-  "test_claims": 71,
+  "total": 233,
+  "constructed_claims": 153,
+  "absent_claims": 80,
+  "dev_docs": 21,
+  "test_docs": 21,
+  "dev_claims": 124,
+  "test_claims": 109,
+  "dev_absent": 42,
+  "test_absent": 38,
+  "source_dev_claims": 82,
+  "source_test_claims": 71,
   "labels": {
     "true": 78,
     "false": 75,
-    "unverifiable": 0
+    "unverifiable": 80
   },
   "methods": {
-    "multi_fact_perturbed": 15,
-    "multi_fact_verbatim": 18,
-    "perturbed_date": 31,
-    "perturbed_days": 4,
+    "verbatim": 60,
     "perturbed_money": 4,
     "perturbed_percent": 21,
-    "verbatim": 60
+    "perturbed_date": 31,
+    "perturbed_days": 4,
+    "multi_fact_verbatim": 18,
+    "multi_fact_perturbed": 15,
+    "generated_absent": 80
   },
   "categories": {
     "Circulars": 52,
+    "Syllabus Queries": 18,
     "Exam Dates": 42,
-    "Fee Deadlines": 17,
     "Hostel Rules": 24,
-    "Syllabus Queries": 18
+    "Fee Deadlines": 17,
+    "Unsupported": 80
   }
 }

@@ -1,0 +1,103 @@
+{
+  "n_scored": 109,
+  "n_excluded_contaminated": 0,
+  "n_absence_above_generation_threshold": 0,
+  "mcnemar_d_vs_b": {
+    "d_better": 45,
+    "b_better": 4,
+    "p_value": 0.0
+  },
+  "mcnemar_d_vs_a": {
+    "d_better": 87,
+    "b_better": 2,
+    "p_value": 0.0
+  },
+  "bootstrap_d_minus_b": {
+    "delta": 0.3752,
+    "ci_low": 0.2661,
+    "ci_high": 0.4771
+  },
+  "confusion_d": [
+    [
+      31,
+      4,
+      1
+    ],
+    [
+      1,
+      32,
+      2
+    ],
+    [
+      0,
+      2,
+      36
+    ]
+  ],
+  "labels": [
+    "true",
+    "false",
+    "unverifiable"
+  ],
+  "judge_backend": "nli",
+  "seconds": 674.8,
+  "brier_d": 0.0751,
+  "calibration_d": [
+    {
+      "bin": "(-0.001, 0.1]",
+      "n": 27,
+      "mean_pred": 0.005,
+      "frac_true": 0.0
+    },
+    {
+      "bin": "(0.1, 0.2]",
+      "n": 3,
+      "mean_pred": 0.15,
+      "frac_true": 0.333
+    },
+    {
+      "bin": "(0.3, 0.4]",
+      "n": 1,
+      "mean_pred": 0.308,
+      "frac_true": 0.0
+    },
+    {
+      "bin": "(0.4, 0.5]",
+      "n": 2,
+      "mean_pred": 0.452,
+      "frac_true": 0.0
+    },
+    {
+      "bin": "(0.5, 0.6]",
+      "n": 5,
+      "mean_pred": 0.554,
+      "frac_true": 0.8
+    },
+    {
+      "bin": "(0.6, 0.7]",
+      "n": 15,
+      "mean_pred": 0.649,
+      "frac_true": 0.867
+    },
+    {
+      "bin": "(0.7, 0.8]",
+      "n": 4,
+      "mean_pred": 0.747,
+      "frac_true": 1.0
+    },
+    {
+      "bin": "(0.8, 0.9]",
+      "n": 4,
+      "mean_pred": 0.869,
+      "frac_true": 1.0
+    },
+    {
+      "bin": "(0.9, 1.0]",
+      "n": 10,
+      "mean_pred": 0.958,
+      "frac_true": 1.0
+    }
+  ],
+  "headline_subset": "real_chunk_well_formed",
+  "rescored_at": "2026-11-24T20:21:27"
+}

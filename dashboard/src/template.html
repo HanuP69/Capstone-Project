@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NIT Jamshedpur groundedness verification</title>
+  <style>__STYLES__</style>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">NIT Jamshedpur · capstone evaluation</p>
+      <h1>Groundedness verification</h1>
+      <p class="subtitle" id="dataset-mode"></p>
+    </div>
+    <div class="stamp" id="generated-at"></div>
+  </header>
+
+  <nav class="tabs" aria-label="Sections">
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="results">Results</button>
+    <button data-tab="claims">Claims</button>
+    <button data-tab="records">Records</button>
+    <button data-tab="verify">Verify a question</button>
+    <button data-tab="limits">Limitations</button>
+  </nav>
+
+  <main>
+    <section id="tab-overview" class="tab active">
+      <div class="cards" id="overview-cards"></div>
+      <div class="panel">
+        <h2>What this page is</h2>
+        <p>Every figure on this page is read from the repository's generated artifacts. The page does not contain a synthetic benchmark, mock claims, or placeholder metrics. The live verifier calls the local pipeline and shows the component scores it returns.</p>
+      </div>
+      <div class="panel" id="quality-panel"></div>
+    </section>
+
+    <section id="tab-results" class="tab">
+      <div class="panel">
+        <h2>All test claims</h2>
+        <div id="metrics-all"></div>
+      </div>
+      <div class="panel">
+        <h2>Real-chunk subset</h2>
+        <p class="muted">Generated absent claims are excluded here; this is the honest headline.</p>
+        <div id="metrics-real"></div>
+      </div>
+      <div class="panel">
+        <h2>Gate ablation</h2>
+        <div id="ablation"></div>
+      </div>
+      <div class="panel">
+        <h2>Multi-fact vs single-fact</h2>
+        <div id="subgroup"></div>
+      </div>
+      <div class="panel">
+        <h2>Unsupervised query run</h2>
+        <div id="unsupervised"></div>
+      </div>
+    </section>
+
+    <section id="tab-claims" class="tab">
+      <div class="panel">
+        <h2>Test claims</h2>
+        <p class="muted">Filter by claim id, label, decision or text. This table is generated from <code>results/test_predictions.csv</code>.</p>
+        <input id="claim-filter" type="search" placeholder="Filter claims…" autocomplete="off">
+        <div id="claims-table"></div>
+      </div>
+    </section>
+
+    <section id="tab-records" class="tab">
+      <div class="panel">
+        <h2>Structured records</h2>
+        <p class="muted">Only records with support at least 2 and an exact source phrase are used by the numeric check.</p>
+        <div id="records-table"></div>
+      </div>
+    </section>
+
+    <section id="tab-verify" class="tab">
+      <div class="panel">
+        <h2>Verify a question</h2>
+        <form id="verify-form">
+          <label for="query">Question for the NITJ corpus</label>
+          <div class="row">
+            <input id="query" name="query" type="text" minlength="4" maxlength="600" required placeholder="e.g. What is the minimum attendance required for end-semester examinations?">
+            <button type="submit">Verify</button>
+          </div>
+        </form>
+        <p class="muted">This calls <code>POST /api/verify-query</code>. If the backend is not running, the page reports the error instead of inventing an answer.</p>
+        <div id="verify-output"></div>
+      </div>
+    </section>
+
+    <section id="tab-limits" class="tab">
+      <div class="panel">
+        <h2>Limitations</h2>
+        <ul id="limitations"></ul>
+      </div>
+    </section>
+  </main>
+
+  <script id="summary" type="application/json">__SUMMARY__</script>
+  <script>__APP__</script>
+</body>
+</html>

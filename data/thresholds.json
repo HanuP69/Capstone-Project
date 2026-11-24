@@ -1,0 +1,11 @@
+{
+  "tau_pass": 0.6,
+  "tau_contra": 0.62,
+  "dev_macro_f1": 0.9264,
+  "dev_accuracy": 0.9274,
+  "weights": {
+    "w_fact": 0.4,
+    "w_policy": 0.25,
+    "w_ground": 0.35
+  }
+}

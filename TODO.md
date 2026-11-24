@@ -3,36 +3,38 @@
 ## Supervised NITJSR evaluation
 The real-corpus evaluation is unsupervised by design. A supervised version needs human labels that do not exist yet:
 
-1. Sample 150 claims from `data/claims.jsonl` and `data/claims_absent.jsonl`.
+1. Sample claims from `data/claims.jsonl` and `data/claims_absent.jsonl`.
 2. Two annotators label each claim against the cited chunk (`source_chunk_id`), blind to the other's labels.
 3. Store raw labels, compute Cohen's kappa with a bootstrap confidence interval, adjudicate disagreements.
-4. Re-use `evaluate.py` unchanged; pass `--mode test` with the annotated file.
+4. Add the annotated file to `evaluate.py` as a labelled test set and report both the constructed-label and human-label results.
 
-Until that exists, no accuracy number for real-corpus claims is reported anywhere.
+Until that exists, the headline remains constructed-label accuracy on real-chunk claims, not a human-verified accuracy.
 
 ## Corpus
-- 180 of 2241 PDFs are ingested. Extending to the full text-bearing set (1094 documents) is a configuration change plus one embedding run; no code change.
-- 1147 PDFs have no text layer and need OCR before they can be indexed.
-- Date coverage improved to 79% of chunks (was 59%); 0 chunks use the fallback date after metadata repair.
-- Tables are extracted with PyMuPDF and split at 1100 words with repeated headers; very wide tables can still lose column alignment.
+- `documents/` contains 2241 PDFs; `select_corpus.py` filters them to a pool of 463 and selects 180. Extending to every text-bearing PDF requires changing the selection quotas in `select_corpus.py` or bypassing `data/selection.json`; it is not only a configuration change.
+- PDFs without a text layer still need OCR before ingestion.
+- Date metadata is noisy. The fallback-date share is not reported as a single number here because the previous two figures contradicted each other; use `data/corpus_stats.json` and `data/quality_audit.csv` as the source of truth.
+- Very wide tables can still lose column alignment when split at the table word limit.
 
 ## Models
-- The NLI cross-encoder (`cross-encoder/nli-MiniLM2-L6-H768`) is cached and active. `Judge` reports `judge_backend: nli`.
-- The reranker (`cross-encoder/ms-marco-MiniLM-L-6-v2`) is cached and active.
+- The NLI cross-encoder (`cross-encoder/nli-MiniLM2-L6-H768`) is expected to be cached; `GET /api/health` reports the active judge backend and any load error.
+- The reranker (`cross-encoder/ms-marco-MiniLM-L-6-v2`) is optional; `/api/health` reports whether it loaded.
 
 ## API
-- Audit logs are written to SQLite (`cache/audit.sqlite`) rather than MongoDB. The proposal named MongoDB; this is a deliberate, documented deviation.
-- No authentication; the service binds to localhost only.
+- SQLite audit logging is implemented in `app.py` at `cache/audit.sqlite` for `/verify-claim`, `/ask`, and `/api/verify-query`. The stored response is truncated, so it is an audit summary rather than a full prompt/response archive.
+- No authentication; the service is intended to bind to localhost.
+- `use_meta_learner` is not part of the API. Weights are fixed and normalised per request; the response says `fixed_weights`.
 
 ## Evaluation
-- Claims are single-fact perturbations of real sentences plus 15 multi-fact (concatenated) claims. Multi-fact accuracy is 0.40 vs 0.91 single-fact; atomic decomposition is still a TODO.
-- The unsupervised leg reports entailment-based support against retrieved evidence, not human faithfulness judgements.
-- Weights and G are not identifiable on this data; the cascade is dominated by the numeric check (F). The learned-weight calibration claim is withdrawn.
-- The regeneration loop rewrites blocked claims up to 2 rounds and abstains if still ungrounded.
+- Claims are single-fact perturbations, verbatim sentences, and concatenated multi-fact claims. A fragment filter exists now, but the source-backed test set still contains 47 fragmentary claims; future runs will reject them at construction time.
+- Multi-fact performance is reported in `results/subgroup_metrics.csv`; atomic decomposition is a heuristic split on `, and` / `; and`, not a parser.
+- A/B/C predictions were rerun with three-way TRUE/FALSE/UNVERIFIABLE prompts. `results/baseline_rerun.json` records the model, seed, sample count and prompt hashes.
+- The 38 test unverifiable claims are model-generated and filtered by the same NLI judge used for scoring. They are audited in `results/quality_audit.csv` and excluded from the source-backed headline; replacing them needs human-written absent questions.
+- Weights are fixed, not learned. Only `tau_pass` and `tau_contra` are tuned on dev.
+- The regeneration loop rewrites blocked claims up to the configured rounds and abstains when no claim passes.
 
-## Open gaps (in-scope, not yet closed)
-- Atomic decomposition of multi-fact claims in `verify()`.
-- Full audit trail with prompts, responses, model digest, seed, chunk ids in `results/test_predictions.csv`.
-- Calibration curve / Brier reporting beyond the single number.
-- `artifacts_manifest.json` maps numbers to scripts but not to commit hashes.
-- Metadata repair: 41% of chunk dates are fallbacks; `is_latest` recomputed but source dates still noisy.
+## Open gaps
+- Full prompt/response audit trail with model digest, seed and per-claim chunk ids; the current SQLite audit stores request and response summaries.
+- Calibration reporting is a Brier score plus a binned CSV; there is no reliability plot yet.
+- `artifacts_manifest.json` records a per-entry artifact commit and the HEAD at generation time, but it does not capture uncommitted working-tree changes.
+- Independent human review of the generated absent claims and the fragmentary constructed claims.

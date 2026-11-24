@@ -325,6 +325,7 @@ def main():
 
     words = [c["n_words"] for c in dedup_chunks if c["chunk_type"] == "prose"]
     stats = {
+        "pdfs_total": len(list(DOCS.glob("*.pdf"))),
         "pdfs_selected": len(names),
         "pdfs_parsed": len(docs),
         "failures": failures,

@@ -1,0 +1,6 @@
+rule,accuracy,macro_f1,missed_falsehood,abstention,delta_accuracy_vs_cascade,delta_macro_f1_vs_cascade
+cascade,0.9083,0.9078,0.0857,0.3578,0.0,0.0
+d_only,0.5596,0.4918,0.1429,0.0642,-0.3487,-0.416
+f_only,0.844,0.8371,0.3714,0.4587,-0.0643,-0.0707
+p_only,0.3761,0.2303,0.9714,0.9541,-0.5322,-0.6775
+g_only,0.5963,0.5244,0.0857,0.0367,-0.312,-0.3834

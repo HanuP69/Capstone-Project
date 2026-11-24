@@ -6,7 +6,8 @@ from collections import defaultdict
 from datetime import date, timedelta
 
 from config import CLAIMS_PER_LABEL, CLAIM_SENT_MAX_WORDS, CLAIM_SENT_MIN_WORDS, DATA, SEED, SPLIT_DEV
-from pipeline_text import entities, parse_dates, sentences
+from pipeline_text import entities, money_spans, parse_dates, sentences
+from quality import has_placeholder, is_well_formed
 
 BOILER = re.compile(
     r"dated|notice|ref\.?\s*no|national institute|advertis|recruitment|registrar|tender|quotation|"
@@ -18,21 +19,6 @@ POLICY = re.compile(
     r"semester|registration|deadline|last date|due|scholarship|cgpa|credit|marks|duration|days|"
     r"hours|percent|%|eligible|required|mandatory|permitted|allowed|prohibited",
     re.I)
-SWAPS = [
-    ("Central Library", "Department Computer Centre"),
-    ("library", "reading room"),
-    ("hostel", "guest house"),
-    ("Hostel", "Guest House"),
-    ("examination", "convocation"),
-    ("Examination", "Convocation"),
-    ("B.Tech", "M.Tech"),
-    ("semester", "summer term"),
-    ("Semester", "Summer Term"),
-    ("attendance", "participation"),
-    ("fee", "security deposit"),
-    ("mess", "canteen"),
-]
-
 
 def clean(sentence):
     s = re.sub(r"\s+", " ", sentence).strip()
@@ -55,6 +41,8 @@ def pick_sentences(chunks):
             if BOILER.search(s) or not POLICY.search(s):
                 continue
             if s.count("|") > 1 or "..." in s:
+                continue
+            if has_placeholder(s) or not is_well_formed(s):
                 continue
             ent = entities(s)
             if not (ent["money"] or ent["percent"] or ent["days"] or ent["dates"]):
@@ -101,9 +89,10 @@ def render_date(iso, template):
 
 
 def replace_money(sentence, old, new):
-    for m in re.finditer(r"(?:rs\.?|inr|rupees?)\s*([\d][\d,]*(?:\.\d+)?)", sentence, re.I):
-        if abs(float(m.group(1).replace(",", "")) - old) < 1e-6:
-            return sentence[:m.start(1)] + f"{new:,.0f}" + sentence[m.end(1):]
+    for start, end, value in money_spans(sentence):
+        if abs(value - old) < 1e-6:
+            rendered = f"{new:,.0f}" if "," in sentence[start:end] else f"{new:.0f}"
+            return sentence[:start] + rendered + sentence[end:]
     return None
 
 
@@ -151,14 +140,6 @@ def perturb(sentence, ent, rng):
     return None
 
 
-def swap_entity(sentence):
-    for a, b in SWAPS:
-        if a in sentence:
-            out = sentence.replace(a, b, 1)
-            if out != sentence and POLICY.search(out):
-                return out
-    return None
-
 
 def main():
     rng = random.Random(SEED)
@@ -173,9 +154,8 @@ def main():
 
     claims = []
     counts = defaultdict(int)
-    used = set()
     for chunk, sent, ent in pool:
-        if all(counts[k] >= CLAIMS_PER_LABEL for k in ("true", "false", "unverifiable")):
+        if counts["true"] >= CLAIMS_PER_LABEL and counts["false"] >= CLAIMS_PER_LABEL:
             break
         base = {
             "category": chunk["category"],
@@ -190,7 +170,6 @@ def main():
                            "label": "true", "method": "verbatim", "kind": "none",
                            "value": None})
             counts["true"] += 1
-            used.add(sent)
         if counts["false"] < CLAIMS_PER_LABEL:
             p = perturb(sent, ent, rng)
             if p:
@@ -202,14 +181,13 @@ def main():
                                    "label": "false", "method": f"perturbed_{kind}",
                                    "kind": kind, "original_value": old, "value": new})
                     counts["false"] += 1
-        if False:
-            pass
 
     true_pool = [c for c in claims if c["label"] == "true"]
     rng2 = random.Random(SEED + 7)
-    mf_n = 0
+    mf_t = 0
+    mf_f = 0
     for i in range(20):
-        if mf_n >= 15:
+        if mf_t >= 15:
             break
         a = true_pool[(2 * i) % len(true_pool)]
         b = true_pool[(2 * i + 1) % len(true_pool)]
@@ -217,22 +195,23 @@ def main():
             continue
         sent = a["claim"].rstrip(".") + ", and " + b["claim"][0].lower() + b["claim"][1:].rstrip(".") + "."
         base = dict(a)
-        base.update({"claim_id": f"MF{mf_n:03d}T", "claim": sent, "label": "true",
+        base.update({"claim_id": f"MF{mf_t:03d}T", "claim": sent, "label": "true",
                      "method": "multi_fact_verbatim", "multi_fact": True, "n_facts": 2,
+                     "source_chunk_id_b": b["source_chunk_id"], "doc_name_b": b["doc_name"],
                      "original_value": None, "value": None, "kind": "none"})
         claims.append(base)
-        nums = re.findall(r"\d+(?:\.\d+)?", b["claim"])
-        if nums and nums[0].isdigit():
-            old = nums[0]
-            new = str(int(old) + rng2.choice([1, 2, 5, 10]))
-            perturbed_b = b["claim"].replace(old, new, 1)
+        perturbed = perturb(b["claim"], entities(b["claim"]), rng2)
+        if perturbed:
+            kind, old, new, perturbed_b = perturbed
             sent2 = a["claim"].rstrip(".") + ", and " + perturbed_b[0].lower() + perturbed_b[1:].rstrip(".") + "."
             base2 = dict(a)
-            base2.update({"claim_id": f"MF{mf_n:03d}F", "claim": sent2, "label": "false",
+            base2.update({"claim_id": f"MF{mf_f:03d}F", "claim": sent2, "label": "false",
                           "method": "multi_fact_perturbed", "multi_fact": True, "n_facts": 2,
-                          "kind": "number", "original_value": old, "value": new})
+                          "source_chunk_id_b": b["source_chunk_id"], "doc_name_b": b["doc_name"],
+                          "kind": kind, "original_value": old, "value": new})
             claims.append(base2)
-            mf_n += 1
+            mf_f += 1
+        mf_t += 1
 
     for c in claims:
         c.setdefault("multi_fact", False)
@@ -252,8 +231,6 @@ def main():
         "methods": {m: sum(1 for c in claims if c["method"] == m) for m in sorted({c["method"] for c in claims})},
         "categories": {m: sum(1 for c in claims if c["category"] == m) for m in sorted({c["category"] for c in claims})},
     }
-    with open(DATA / "split.json", "w", encoding="utf-8") as f:
-        json.dump(info, f, indent=2)
     print(json.dumps(info, indent=2))
     for c in claims[:8]:
         print(c["label"], "|", c["claim"][:160])

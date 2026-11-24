@@ -1,0 +1,5 @@
+condition,n,accuracy,macro_precision,macro_recall,macro_f1,missed_falsehood_rate,abstention_rate,per_class_precision,per_class_recall,per_class_f1
+pred_a,109,0.1284,0.0549,0.1228,0.0759,1.0,0.7798,"{'true': 0.0, 'false': 0.0, 'unverifiable': 0.165}","{'true': 0.0, 'false': 0.0, 'unverifiable': 0.368}","{'true': 0.0, 'false': 0.0, 'unverifiable': 0.228}"
+pred_b,109,0.5321,0.6905,0.5438,0.4702,0.0571,0.0367,"{'true': 0.6, 'false': 0.471, 'unverifiable': 1.0}","{'true': 0.583, 'false': 0.943, 'unverifiable': 0.105}","{'true': 0.592, 'false': 0.629, 'unverifiable': 0.19}"
+pred_c,109,0.5321,0.6879,0.5431,0.4798,0.0857,0.0459,"{'true': 0.6, 'false': 0.464, 'unverifiable': 1.0}","{'true': 0.583, 'false': 0.914, 'unverifiable': 0.132}","{'true': 0.592, 'false': 0.615, 'unverifiable': 0.233}"
+pred_d,109,0.9083,0.9113,0.9076,0.9078,0.0857,0.3578,"{'true': 0.969, 'false': 0.842, 'unverifiable': 0.923}","{'true': 0.861, 'false': 0.914, 'unverifiable': 0.947}","{'true': 0.912, 'false': 0.877, 'unverifiable': 0.935}"

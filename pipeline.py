@@ -12,20 +12,29 @@ import numpy as np
 import ollama
 from rank_bm25 import BM25Okapi
 
-from config import (ANSWER_CTX_CHAR, ANSWER_NUM_PREDICT, ATOMIC_MIN_PART_WORDS, BEST_SENT_MIN_WORDS,
-                    CACHE, DATA, DEFAULT_WEIGHTS, DENSE_WEIGHT, DRAFT_NUM_PREDICT, EMBED_BATCH,
-                    EMBED_CHAR_LIMIT, EMB_MODEL, EVIDENCE_CHAR_LIMIT, EVIDENCE_SNIPPET_CHAR, FACT_BLOCK,
-                    FACT_PASS, GEN_MODEL, GROUND_PENALTY, JUDGE_LLM_NUM_PREDICT, JUDGE_TOP,
+from config import (ANSWER_CTX_CHAR, ANSWER_NUM_PREDICT, ATOMIC_MIN_PART_WORDS, ATOMIC_SPLIT,
+                    BEST_SENT_MIN_WORDS, CACHE, DATA, DEFAULT_WEIGHTS, DENSE_WEIGHT,
+                    DRAFT_NUM_PREDICT, EMBED_BATCH, EMBED_CHAR_LIMIT, EMB_MODEL,
+                    EVIDENCE_CHAR_LIMIT, EVIDENCE_SNIPPET_CHAR, FACT_BLOCK, FACT_PASS,
+                    GEN_MODEL, GROUND_PENALTY, JUDGE_LLM_NUM_PREDICT, JUDGE_TOP,
                     LLM_CTX_CHAR, LLM_NUM_CTX, LLM_NUM_PREDICT, LLM_TEMPERATURE,
-                    MAX_ENTAIL_FOR_UNSUPPORTED, NLI_MODEL, NUMERIC_TOL_MONEY, NUMERIC_TOL_PCT,
-                    OVERLAP_GATE, RECENCY_DEFAULT_AGE, RECENCY_LAMBDA, REGEN_NUM_PREDICT,
-                    REGEN_ROUNDS, REGEN_TEMPERATURE, RERANK_CHAR_LIMIT, RERANK_MODEL, RERANK_TOP,
-                    RETRIEVE_K, ROOT, RRF_K, SEED,                     SPARSE_WEIGHT, UNSUP_CLAIM_MIN_WORDS, WIDE_SENT_LIMIT)
+                    NLI_MODEL, NUMERIC_TOL_DAYS, NUMERIC_TOL_MONEY, NUMERIC_TOL_PCT,
+                    OVERLAP_GATE, RECENCY_BASE, RECENCY_DEFAULT_AGE, RECENCY_LAMBDA,
+                    RECENCY_SPAN, RECORD_MIN_SUPPORT, REGEN_NUM_PREDICT, REGEN_ROUNDS,
+                    REGEN_TEMPERATURE, RERANK_CHAR_LIMIT, RERANK_MODEL, RERANK_TOP,
+                    RETRIEVE_K, ROOT, RRF_K, SEED, SPARSE_WEIGHT, TAU_CONTRA, TAU_PASS,
+                    UNSUP_CLAIM_MIN_WORDS, WIDE_SENT_LIMIT)
 from pipeline_text import (age_years, entities, overlap_terms, parse_dates, parse_money,
                            parse_percent, sentences, tokenize)
 
 INDEX_DIR = ROOT / "index"
 COLLECTION = "nitj_chunks"
+TOPIC_STOP = set("the a an and or of to in on at by for with from is are was were be been being this that "
+                 "these those it its as if then than not no yes fee fees amount rs inr rupees".split())
+
+
+def content_terms(text):
+    return {token for token in tokenize(text) if token not in TOPIC_STOP and not token.isdigit()}
 
 @dataclass
 class ClaimResult:
@@ -53,6 +62,8 @@ class AnswerResult:
     latency: float
     abstained: bool = False
     citations: list = field(default_factory=list)
+    evaluated_claims: list = field(default_factory=list)
+    retrieval_stats: dict = field(default_factory=dict)
 
 
 def load_chunks():
@@ -65,7 +76,11 @@ class Cache:
         self.con.execute("create table if not exists kv (k text primary key, v text, at real)")
         self.con.commit()
 
-    def key(self, model, prompt, temperature, num_predict, seed):
+    def key(self, model, prompt, temperature, num_predict, seed, num_ctx):
+        raw = f"{model}|{temperature}|{num_predict}|{num_ctx}|{seed}|{prompt}".encode("utf-8")
+        return hashlib.sha256(raw).hexdigest()
+
+    def legacy_key(self, model, prompt, temperature, num_predict, seed):
         raw = f"{model}|{temperature}|{num_predict}|{seed}|{prompt}".encode("utf-8")
         return hashlib.sha256(raw).hexdigest()
 
@@ -84,18 +99,26 @@ class LLM:
         self.cache = cache or Cache()
 
     def call(self, prompt, temperature=LLM_TEMPERATURE, num_predict=LLM_NUM_PREDICT, seed=SEED):
-        k = self.cache.key(self.model, prompt, temperature, num_predict, seed)
+        k = self.cache.key(self.model, prompt, temperature, num_predict, seed, LLM_NUM_CTX)
         hit = self.cache.get(k)
+        if hit is None:
+            hit = self.cache.get(self.cache.legacy_key(self.model, prompt, temperature, num_predict, seed))
         if hit is not None:
             return hit
-        res = ollama.chat(model=self.model, messages=[{"role": "user", "content": prompt}],
-                          options={"temperature": temperature, "num_predict": num_predict,
-                                   "seed": seed, "num_ctx": LLM_NUM_CTX}, think=False)
-        text = (res.message.content or "").strip()
-        if not text:
-            raise RuntimeError("empty generation")
-        self.cache.put(k, text)
-        return text
+        last = None
+        for _ in range(2):
+            try:
+                res = ollama.chat(model=self.model, messages=[{"role": "user", "content": prompt}],
+                                  options={"temperature": temperature, "num_predict": num_predict,
+                                           "seed": seed, "num_ctx": LLM_NUM_CTX}, think=False)
+                text = (res.message.content or "").strip()
+                if text:
+                    self.cache.put(k, text)
+                    return text
+                last = "empty generation"
+            except Exception as exc:
+                last = repr(exc)
+        raise RuntimeError(f"generation failed for {self.model}: {last}")
 
     def embed(self, texts):
         out = []
@@ -114,6 +137,7 @@ class Judge:
         self.backend = "nli"
         self.llm = llm
         self.model = None
+        self.load_error = ""
         try:
             from sentence_transformers import CrossEncoder
             self.model = CrossEncoder(NLI_MODEL, max_length=512, local_files_only=True, device="cpu")
@@ -165,6 +189,7 @@ class Judge:
 class Reranker:
     def __init__(self):
         self.model = None
+        self.error = ""
         try:
             from sentence_transformers import CrossEncoder
             self.model = CrossEncoder(RERANK_MODEL, max_length=512, local_files_only=True, device="cpu")
@@ -189,7 +214,7 @@ class Retriever:
         client = chromadb.PersistentClient(path=str(INDEX_DIR))
         self.col = client.get_collection(COLLECTION)
         self.reranker = Reranker()
-        self.stats = {"dense_calls": 0, "rerank_calls": 0}
+        self.stats = {"dense_calls": 0, "rerank_calls": 0, "retrieve_calls": 0}
 
     def _dense(self, query, k):
         q = self.llm.embed([query])
@@ -208,6 +233,7 @@ class Retriever:
         return [{"chunk_id": self.ids[i], "score": float(scores[i]), "rank": r + 1} for r, i in enumerate(order)]
 
     def retrieve(self, query, k=RETRIEVE_K, rerank=True):
+        self.stats["retrieve_calls"] += 1
         dense = self._dense(query, k)
         sparse = self._sparse(query, k)
         fused = {}
@@ -216,7 +242,7 @@ class Retriever:
                 cid = row["chunk_id"]
                 chunk = self.by_id.get(cid, {})
                 age = age_years(chunk.get("issue_date", "")) or RECENCY_DEFAULT_AGE
-                recency = 0.55 + 0.45 * float(np.exp(-RECENCY_LAMBDA * age))
+                recency = RECENCY_BASE + RECENCY_SPAN * float(np.exp(-RECENCY_LAMBDA * age))
                 fused[cid] = fused.get(cid, 0.0) + w * recency / (RRF_K + row["rank"])
         ranked = sorted(fused.items(), key=lambda x: -x[1])[:max(k, RERANK_TOP * 3)]
         docs = []
@@ -234,7 +260,6 @@ class Retriever:
         return docs
 
     def best_sentences(self, claim, docs, limit=JUDGE_TOP):
-        ct = tokenize(claim)
         scored = []
         for d in docs:
             for s in sentences(d["text"]):
@@ -248,7 +273,7 @@ class Retriever:
         out = []
         seen = set()
         for ov, s, d in scored:
-            key = s[:80]
+            key = re.sub(r"\W+", " ", s.lower()).strip()
             if key in seen:
                 continue
             seen.add(key)
@@ -269,30 +294,43 @@ class NumericCheck:
         ce = entities(claim)
         wide = evidence_sentences or []
         ev_ids = {e.get("chunk_id") for e in wide}
+        low = claim.lower()
         for rec in self.records:
+            if int(rec.get("support", 0)) < RECORD_MIN_SUPPORT:
+                continue
             if rec.get("source_chunk_id") not in ev_ids:
                 continue
-            key_tokens = rec["key"].replace("_", " ").split()
-            if not any(t in claim.lower() for t in key_tokens):
+            aliases = rec.get("aliases") or [rec["key"].replace("_", " ")]
+            if not any(alias.lower() in low for alias in aliases):
                 continue
             rt = rec.get("val_type")
             kind = {"currency": "money", "percent": "percent", "count_days": "days",
-                    "date": "dates"}.get(rt)
+                    "date": "dates", "count_books": "books", "number": "cgpa",
+                    "time": "times"}.get(rt)
             if kind is None or not ce.get(kind):
                 continue
+            other_kinds = [name for name in ("money", "percent", "dates", "days", "cgpa", "times")
+                           if name != kind and ce.get(name)]
+            if other_kinds:
+                continue
             rv = rec["value"]
-            if rt == "date":
-                if rv in ce["dates"]:
+            if rt in ("date", "time"):
+                if str(rv) in ce[kind]:
                     return 1.0, f"record {rec['key']} matches [{rec['source_doc']}]"
-                return 0.0, f"record {rec['key']} {rv} vs {ce['dates']} [{rec['source_doc']}]"
+                return 0.0, f"record {rec['key']} {rv} vs {ce[kind]} [{rec['source_doc']}]"
             try:
                 rvn = float(rv)
             except (TypeError, ValueError):
                 continue
-            tol = self.tol_money if kind == "money" else self.tol_pct if kind == "percent" else 0.5
-            if any(abs(cv - rvn) <= tol * max(1.0, abs(rvn)) for cv in ce[kind]):
+            if kind == "money":
+                matched = any(abs(cv - rvn) <= self.tol_money * max(1.0, abs(rvn)) for cv in ce[kind])
+            elif kind in ("percent", "cgpa"):
+                matched = any(abs(cv - rvn) <= self.tol_pct for cv in ce[kind])
+            else:
+                matched = any(abs(cv - rvn) <= NUMERIC_TOL_DAYS for cv in ce[kind])
+            if matched:
                 return 1.0, f"record {rec['key']} matches [{rec['source_doc']}]"
-            return 0.0, f"record {rec['key']} {rv} vs {ce[kind]} [{rec['source_doc']}]"
+            return 0.0, f"record {rec['key']} {rec.get('operator', '=')} {rv} vs {ce[kind]} [{rec['source_doc']}]"
         return None
 
     def compare(self, claim, evidence_sentences):
@@ -300,12 +338,15 @@ class NumericCheck:
         if rr is not None:
             return rr
         ce = entities(claim)
-        if not (ce["money"] or ce["percent"] or ce["dates"]):
+        kinds = [k for k in ("money", "percent", "dates", "days", "cgpa", "times") if ce[k]]
+        if not kinds:
             return 0.5, "no checkable value in claim"
-        kinds = [k for k in ("money", "percent", "dates") if ce[k]]
         best = None
+        claim_terms = content_terms(claim)
         for es in evidence_sentences:
             if overlap_terms(claim, es["text"]) < OVERLAP_GATE:
+                continue
+            if claim_terms and not (claim_terms & content_terms(es["text"])):
                 continue
             ee = entities(es["text"])
             hits = 0
@@ -319,8 +360,10 @@ class NumericCheck:
                 for cv in ce[k]:
                     if k == "money":
                         matched = any(abs(cv - ev) <= self.tol_money * max(1.0, abs(ev)) for ev in ee[k])
-                    elif k == "percent":
-                        matched = any(abs(cv - ev) <= self.tol_pct * max(1.0, abs(ev)) for ev in ee[k])
+                    elif k in ("percent", "cgpa"):
+                        matched = any(abs(cv - ev) <= self.tol_pct for ev in ee[k])
+                    elif k == "days":
+                        matched = any(abs(cv - ev) <= NUMERIC_TOL_DAYS for ev in ee[k])
                     else:
                         matched = cv in ee[k]
                     if matched:
@@ -370,21 +413,17 @@ class Gate:
     def __init__(self, weights=None, tau_pass=None, tau_contra=None):
         cfg = json.loads((DATA / "thresholds.json").read_text(encoding="utf-8")) if (DATA / "thresholds.json").exists() else {}
         self.w = weights or cfg.get("weights") or DEFAULT_WEIGHTS
-        self.tau_pass = tau_pass if tau_pass is not None else cfg.get("tau_pass", 0.60)
-        self.tau_contra = tau_contra if tau_contra is not None else cfg.get("tau_contra", 0.60)
+        self.tau_pass = tau_pass if tau_pass is not None else cfg.get("tau_pass", TAU_PASS)
+        self.tau_contra = tau_contra if tau_contra is not None else cfg.get("tau_contra", TAU_CONTRA)
 
     def score(self, F, P, D):
         return float(np.clip(self.w["w_fact"] * F + self.w["w_policy"] * P + self.w["w_ground"] * D, 0, 1))
 
     def decide(self, F, P, D, C):
         G = self.score(F, P, D)
-        if F <= FACT_BLOCK:
+        if F <= FACT_BLOCK or P <= FACT_BLOCK:
             return G, "BLOCK", "false"
-        if P <= FACT_BLOCK:
-            return G, "BLOCK", "false"
-        if F >= FACT_PASS:
-            return G, "PASS", "true"
-        if C >= self.tau_contra:
+        if C >= self.tau_contra and D < self.tau_pass:
             return G, "BLOCK", "false"
         if D >= self.tau_pass:
             return G, "PASS", "true"
@@ -407,7 +446,7 @@ class Pipeline:
 
     def verify(self, claim, weights=None):
         gate = Gate(weights=weights) if weights else self.gate
-        parts = [p.strip() for p in re.split(r",\s*and\s+|;\s*and\s+", claim) if p.strip()]
+        parts = [p.strip() for p in re.split(ATOMIC_SPLIT, claim) if p.strip()]
         if len(parts) >= 2 and all(len(p.split()) >= ATOMIC_MIN_PART_WORDS for p in parts):
             subs = [self.verify(p, weights=weights) for p in parts]
             F = min(s.F for s in subs)
@@ -464,8 +503,10 @@ class Pipeline:
             claims.append(self.verify(s.rstrip(".")))
         kept = []
         for c in claims:
-            if c.decision != "BLOCK":
+            if c.decision == "PASS":
                 kept.append(c)
+                continue
+            if c.decision != "BLOCK":
                 continue
             cur = c
             for _ in range(REGEN_ROUNDS):
@@ -477,15 +518,37 @@ class Pipeline:
                 rw = rw.strip().splitlines()[0].strip() if rw.strip() else ""
                 if not rw or "unverifiable" in rw.lower():
                     break
-                cur = self.verify(rw.rstrip("."))
-                if cur.decision != "BLOCK":
-                    kept.append(cur)
+                nxt = self.verify(rw.rstrip("."))
+                if nxt.decision == "PASS":
+                    nxt.regen = rw
+                    kept.append(nxt)
                     break
-        abstained = not kept
-        answer = " ".join(f"{c.claim}." for c in kept) if kept else "I could not verify an answer from the available circulars."
-        cites = sorted({e["doc_name"] for c in kept for e in c.evidence})
-        return AnswerResult(query=query, draft=draft, answer=answer, claims=claims,
-                            latency=round(time.time() - t0, 2), abstained=abstained, citations=cites)
+                cur = nxt
+        seen = set()
+        final = []
+        for c in kept:
+            key = re.sub(r"\W+", " ", c.claim.lower()).strip()
+            if key in seen:
+                continue
+            seen.add(key)
+            final.append(c)
+        abstained = not final
+        answer = " ".join(f"{c.claim}." for c in final) if final else "I could not verify an answer from the available circulars."
+        cites = sorted({e["doc_name"] for c in final for e in c.evidence})
+        return AnswerResult(query=query, draft=draft, answer=answer, claims=final,
+                            latency=round(time.time() - t0, 2), abstained=abstained, citations=cites,
+                            evaluated_claims=claims, retrieval_stats=dict(self.retriever.stats))
+
+    def health(self):
+        return {
+            "judge_backend": self.judge.backend,
+            "judge_error": self.judge.load_error,
+            "reranker_enabled": self.retriever.reranker.model is not None,
+            "reranker_error": self.retriever.reranker.error,
+            "records": len(self.numeric.records),
+            "thresholds": {"tau_pass": self.gate.tau_pass, "tau_contra": self.gate.tau_contra},
+            "retrieval_stats": dict(self.retriever.stats),
+        }
 
 
 if __name__ == "__main__":

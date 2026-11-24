@@ -81,7 +81,7 @@ def main():
 
     rest = [r for r in rows if r["doc_name"] not in chosen]
     rest.sort(key=lambda r: (r["distinct_topics"], r["issue_date"]), reverse=True)
-    target = min(PDF_TARGET + 30, len(rows))
+    target = min(PDF_TARGET, len(rows))
     for r in rest:
         if len(chosen) >= target:
             break

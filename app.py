@@ -1,7 +1,10 @@
 import json
 import os
+import sqlite3
 import threading
+import uuid
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -10,28 +13,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from config import DATA, RESULTS, ROOT
+from config import CACHE, DATA, DEFAULT_WEIGHTS, RESULTS, ROOT
 from pipeline import Pipeline
 
 app = FastAPI(title="NITJ Groundedness Verification", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=os.environ.get("CORS_ORIGINS", "http://127.0.0.1:5173,http://127.0.0.1:5176").split(","),
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
 
 _lock = threading.Lock()
+_audit_lock = threading.Lock()
 _pipeline = None
+AUDIT_DB = CACHE / "audit.sqlite"
 
 
 class ClaimIn(BaseModel):
     claim: str = Field(..., min_length=8, max_length=1200)
-    w_fact: float = Field(0.40, ge=0, le=1)
-    w_policy: float = Field(0.25, ge=0, le=1)
-    w_ground: float = Field(0.35, ge=0, le=1)
+    w_fact: float = Field(DEFAULT_WEIGHTS["w_fact"], ge=0, le=1)
+    w_policy: float = Field(DEFAULT_WEIGHTS["w_policy"], ge=0, le=1)
+    w_ground: float = Field(DEFAULT_WEIGHTS["w_ground"], ge=0, le=1)
 
 
 class QueryIn(BaseModel):
@@ -44,6 +49,21 @@ def get_pipeline():
         if _pipeline is None:
             _pipeline = Pipeline()
     return _pipeline
+
+
+def audit_event(endpoint, request, response):
+    try:
+        with _audit_lock:
+            connection = sqlite3.connect(AUDIT_DB)
+            connection.execute("create table if not exists audit (id integer primary key autoincrement, at text, endpoint text, request text, response text)")
+            connection.execute("insert into audit (at, endpoint, request, response) values (?, ?, ?, ?)",
+                               (datetime.now().isoformat(timespec="seconds"), endpoint,
+                                json.dumps(request, ensure_ascii=False),
+                                json.dumps(response, ensure_ascii=False)[:20000]))
+            connection.commit()
+            connection.close()
+    except Exception:
+        pass
 
 
 def read_csv(name):
@@ -62,9 +82,11 @@ def read_json(path):
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard():
-    path = ROOT / "dashboard.html"
+    path = ROOT / "dashboard" / "dist" / "index.html"
     if not path.exists():
-        return "<h1>NITJ verification</h1><p>Run make_docs.py to generate the dashboard.</p>"
+        path = ROOT / "dashboard.html"
+    if not path.exists():
+        return "<h1>NITJ verification</h1><p>Run make_docs.py and dashboard/build.py to generate the dashboard.</p>"
     return path.read_text(encoding="utf-8")
 
 
@@ -77,6 +99,8 @@ def verify_claim(req: ClaimIn):
     res = get_pipeline().verify(req.claim, weights=weights)
     payload = asdict(res)
     payload["weights"] = weights
+    audit_event("verify-claim", {"claim": req.claim, "weights": weights},
+                {"decision": res.decision, "label": res.label, "F": res.F, "D": res.D})
     return payload
 
 
@@ -85,6 +109,9 @@ def ask(req: QueryIn):
     res = get_pipeline().answer(req.query)
     payload = asdict(res)
     payload["claims"] = [asdict(c) for c in res.claims]
+    payload["evaluated_claims"] = [asdict(c) for c in res.evaluated_claims]
+    audit_event("ask", {"query": req.query},
+                {"answer": res.answer, "abstained": res.abstained, "claims": len(res.claims)})
     return payload
 
 
@@ -135,7 +162,7 @@ def _claim_to_api(c, idx):
         "decision": c.decision, "predicted_label": c.label,
         "fact_explanation": c.fact_note, "policy_explanation": c.policy_note,
         "retrieved_contexts": ctxs, "regenerated_claim": (c.regen or None),
-        "weighting_mode": "meta_learner_mle", "retrieval_method": "hybrid_rrf",
+        "weighting_mode": "fixed_weights", "retrieval_method": "hybrid_rrf",
         "is_synthetic_benchmark": False,
     }
 
@@ -146,16 +173,28 @@ def verify_query(req: QueryIn):
         res = get_pipeline().answer(req.query)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
-    claims = [_claim_to_api(c, i) for i, c in enumerate(res.claims)]
+    source = res.evaluated_claims or res.claims
+    claims = [_claim_to_api(c, i) for i, c in enumerate(source)]
     g_scores = [c["G_score"] for c in claims]
     overall = (sum(g_scores) / len(g_scores)) if g_scores else 0.0
-    return {
-        "query": res.query, "draft_response": res.draft,
+    payload = {
+        "request_id": uuid.uuid4().hex, "query": res.query, "draft_response": res.draft,
         "final_grounded_answer": res.answer, "overall_groundedness": round(overall, 4),
         "total_claims": len(claims),
         "passed_claims": sum(1 for c in claims if c["decision"] == "PASS"),
         "flagged_claims": sum(1 for c in claims if c["decision"] == "FLAG"),
         "blocked_claims": sum(1 for c in claims if c["decision"] == "BLOCK"),
         "latency_seconds": res.latency, "claims": claims,
+        "weighting_mode": "fixed_weights",
+        "retrieval_stats": res.retrieval_stats,
         "dataset_mode": "Live pipeline — NIT Jamshedpur circulars",
     }
+    audit_event("verify-query", {"query": req.query},
+                {"answer": res.answer, "claims": len(claims), "overall": payload["overall_groundedness"]})
+    return payload
+
+
+@app.get("/api/health")
+def health():
+    pipe = get_pipeline()
+    return {"status": "ok", "pipeline": pipe.health()}

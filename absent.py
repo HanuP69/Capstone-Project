@@ -1,10 +1,12 @@
+import hashlib
 import json
-import random
+import re
 
-from config import DATA, SEED
+from config import ABSENCE_CONTRA_MAX, DATA, MAX_ENTAIL_FOR_UNSUPPORTED
 from evaluate import QUERIES
-from pipeline import Judge, LLM, Pipeline, Retriever
+from pipeline import LLM, Pipeline, Retriever
 from pipeline_text import sentences
+from quality import has_placeholder, is_hedge, is_well_formed
 
 EXTRA = [
     "What is the fine for late hostel fee payment at NIT Jamshedpur?",
@@ -22,44 +24,52 @@ EXTRA = [
 ]
 
 
+def split_for(question):
+    digest = hashlib.sha1(question.encode("utf-8")).hexdigest()
+    return "dev" if int(digest[:8], 16) % 2 == 0 else "test"
+
+
 def main():
-    rng = random.Random(SEED)
     llm = LLM()
     retriever = Retriever(llm)
     pipe = Pipeline(retriever=retriever, llm=llm)
     questions = QUERIES + EXTRA
     kept = []
     tried = 0
-    for q in questions:
-        for temp in (0.8, 1.0):
+    for question in questions:
+        for temperature in (0.8, 1.0):
             tried += 1
             try:
-                ans = llm.call(f"Student question: {q}\nAnswer confidently in two sentences.", temp, 120)
+                answer = llm.call(f"Student question: {question}\nAnswer confidently in two sentences.", temperature, 120)
             except Exception:
                 continue
-            for s in sentences(ans):
-                s = s.strip().rstrip(".")
-                if len(s.split()) < 8:
+            for sentence in sentences(answer):
+                sentence = sentence.strip().rstrip(".")
+                if len(sentence.split()) < 8:
                     continue
-                docs = retriever.retrieve(s, k=8)
-                ev = retriever.best_sentences(s, docs, limit=3)
-                ent, contra, _ = pipe.judge.entail(s, ev or docs[:2])
-                if ent < 0.35 and contra < 0.5:
-                    kept.append({"claim": s, "label": "unverifiable", "method": "generated_absent",
-                                 "source_question": q, "max_entail": round(float(ent), 3),
-                                 "split": "dev" if rng.random() < 0.5 else "test"})
+                if is_hedge(sentence) or has_placeholder(sentence) or not is_well_formed(sentence):
+                    continue
+                docs = retriever.retrieve(sentence, k=8)
+                evidence = retriever.best_sentences(sentence, docs, limit=3)
+                entail, contra, _ = pipe.judge.entail(sentence, evidence or docs[:2])
+                if entail < MAX_ENTAIL_FOR_UNSUPPORTED and contra < ABSENCE_CONTRA_MAX:
+                    kept.append({"claim": sentence, "label": "unverifiable", "method": "generated_absent",
+                                 "source_question": question, "max_entail": round(float(entail), 3),
+                                 "split": split_for(question)})
             print(f"  {len(kept)} kept / {tried} answers", flush=True)
     seen = set()
     out = []
-    for c in kept:
-        if c["claim"] in seen:
+    for claim in kept:
+        key = re.sub(r"\W+", " ", claim["claim"].lower()).strip()
+        if key in seen:
             continue
-        seen.add(c["claim"])
-        out.append({**c, "claim_id": f"U{len(out):03d}", "category": "Unsupported",
-                    "doc_name": "", "source_chunk_id": "", "source_date": "", "ref_number": "", "kind": "none", "value": None})
-    with open(DATA / "claims_absent.jsonl", "w", encoding="utf-8") as f:
-        for c in out:
-            f.write(json.dumps(c, ensure_ascii=False) + "\n")
+        seen.add(key)
+        out.append({**claim, "claim_id": f"U{len(out):03d}", "category": "Unsupported",
+                    "doc_name": "", "source_chunk_id": "", "source_date": "", "ref_number": "",
+                    "kind": "none", "value": None})
+    with open(DATA / "claims_absent.jsonl", "w", encoding="utf-8") as handle:
+        for claim in out:
+            handle.write(json.dumps(claim, ensure_ascii=False) + "\n")
     print("absent claims:", len(out))
 
 

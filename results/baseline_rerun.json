@@ -1,0 +1,18 @@
+{
+  "version": "three_way_v1",
+  "model": "gemma4:e4b",
+  "seed": 42,
+  "temperature_a_b": 0.0,
+  "temperature_c": 0.7,
+  "samples_c": 3,
+  "num_predict": 10,
+  "prompt_a_sha256": "29b028ed296e24137cc70e2d241ec9f0c9433e58249176358f097553d6813640",
+  "prompt_b_sha256": "7542032674ed8bcffcd0a7389d145d567af1526973e0f17debb1846aafca3b97",
+  "split": "test",
+  "claims_total": 109,
+  "claims_pending": 109,
+  "started_at": "2026-11-24T14:34:59.955126+00:00",
+  "completed_at": "2026-11-24T14:40:09.633302+00:00",
+  "claims_completed": 109,
+  "elapsed_seconds": 309.7
+}

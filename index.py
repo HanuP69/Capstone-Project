@@ -60,8 +60,8 @@ def main():
         "n_words": int(c["n_words"]),
     } for c in chunks]
     for i in range(0, len(ids), CHROMA_ADD_BATCH):
-        col.add(ids=ids[i:i + 400], embeddings=embs[i:i + 400].tolist(),
-                documents=docs[i:i + 400], metadatas=metas[i:i + 400])
+        col.add(ids=ids[i:i + CHROMA_ADD_BATCH], embeddings=embs[i:i + CHROMA_ADD_BATCH].tolist(),
+                documents=docs[i:i + CHROMA_ADD_BATCH], metadatas=metas[i:i + CHROMA_ADD_BATCH])
     print("chroma count", col.count(), flush=True)
 
     tokens = [tokenize(d) for d in docs]

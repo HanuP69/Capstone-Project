@@ -1,0 +1,83 @@
+[
+  {
+    "key": "attendance_min",
+    "description": "Minimum attendance required for end-semester examinations",
+    "value": 75.0,
+    "operator": ">=",
+    "val_type": "percent",
+    "aliases": [
+      "minimum attendance",
+      "attendance requirement"
+    ],
+    "support": 3,
+    "candidates": [
+      75.0
+    ],
+    "source_chunk_id": "c00065",
+    "source_doc": "notices_5481.pdf",
+    "source_date": "2023-08-02",
+    "source_phrase": "minimum attendance",
+    "evidence": "endance in classes etc. are given in Appendix II. “Appendix II: In any case the minimum attendance in order to make the student eligible to appear in end semester examination should not fall below 75%. However, in certain cases due to compelling reason like serious illness of his / her, or natural calamity or death case in"
+  },
+  {
+    "key": "late_registration_fee",
+    "description": "Late semester registration fee",
+    "value": 1000.0,
+    "operator": "=",
+    "val_type": "currency",
+    "aliases": [
+      "late registration fee",
+      "late fee",
+      "late fine"
+    ],
+    "support": 3,
+    "candidates": [
+      1000.0
+    ],
+    "source_chunk_id": "c00096",
+    "source_doc": "notices_5572.pdf",
+    "source_date": "2023-09-04",
+    "source_phrase": "late fine",
+    "evidence": "ster registration only by physical reporting of the student. ii) Allowed with a late fine of Rs. 1000/- on students who have paid the semester fee on or before 13.08.2023 but not completed their semester registrations in person. iii) Allowed with a late fine of Rs. 2000/- on students who have neither paid the semester fee nor completed th"
+  },
+  {
+    "key": "btech_total_fee",
+    "description": "B.Tech first-semester total fee (tuition, institute and one-time payment)",
+    "value": 106500.0,
+    "operator": "=",
+    "val_type": "currency",
+    "aliases": [
+      "b.tech total fee",
+      "total fee"
+    ],
+    "support": 2,
+    "candidates": [
+      79000.0,
+      106500.0
+    ],
+    "source_chunk_id": "c00023",
+    "source_doc": "dean_office_notices_19.pdf",
+    "source_date": "2025-08-18",
+    "source_phrase": "Total Fee (Tuition Fee",
+    "evidence": "| --- | --- | --- | --- | | | | General, EWS & OBC | PwD | SC/ST | | B.Tech | Total Fee (Tuition Fee + Institute Fee + One Time Payment) | Rs. 106500/- | Rs. 44000/- | Rs. 44000/- | | | Hostel Fee | Rs. 15000/- | Rs. 15000/- | Rs. 15000/- | | | Mess Fee | Rs. 17000/- | Rs. 17000/- | Rs. 17000/- |"
+  },
+  {
+    "key": "hostel_fee",
+    "description": "Hostel fee per semester",
+    "value": 15000.0,
+    "operator": "=",
+    "val_type": "currency",
+    "aliases": [
+      "hostel fee"
+    ],
+    "support": 7,
+    "candidates": [
+      15000.0
+    ],
+    "source_chunk_id": "c00485",
+    "source_doc": "notices_6404.pdf",
+    "source_date": "2024-08-17",
+    "source_phrase": "hostel fee",
+    "evidence": "ll not be allowed to take meals in any other dining hall. 4. Student has to Pay Hostel Fee (Rs. 15000/-) and Mess Fee (Rs.18000/-) for first semester before wish to opt hostel and mess, they can approach to chief warden office. 6. Student has to take print and submit Hostel Admission form (Attached in last page) along with 02 passport siz"
+  }
+]
