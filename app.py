@@ -1,4 +1,5 @@
 import json
+import os
 import threading
 from dataclasses import asdict
 from pathlib import Path
@@ -16,7 +17,7 @@ app = FastAPI(title="NITJ Groundedness Verification", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(","),
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],

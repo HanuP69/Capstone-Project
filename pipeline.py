@@ -12,9 +12,9 @@ import numpy as np
 import ollama
 from rank_bm25 import BM25Okapi
 
-from config import (CACHE, DATA, DENSE_WEIGHT, EMB_MODEL, GEN_MODEL, JUDGE_TOP, NLI_MODEL,
-                    RECENCY_LAMBDA, RERANK_MODEL, RERANK_TOP, RETRIEVE_K, ROOT, RRF_K,
-                    SEED, SPARSE_WEIGHT, DEFAULT_WEIGHTS)
+from config import (CACHE, DATA, DEFAULT_WEIGHTS, DENSE_WEIGHT, EMB_MODEL, FACT_BLOCK, FACT_PASS,
+                    GEN_MODEL, GROUND_PENALTY, JUDGE_TOP, NLI_MODEL, RECENCY_LAMBDA, RERANK_MODEL,
+                    RERANK_TOP, RETRIEVE_K, ROOT, RRF_K, SEED, SPARSE_WEIGHT)
 from pipeline_text import (age_years, entities, overlap_terms, parse_dates, parse_money,
                            parse_percent, sentences, tokenize)
 
@@ -372,11 +372,11 @@ class Gate:
 
     def decide(self, F, P, D, C):
         G = self.score(F, P, D)
-        if F <= 0.05:
+        if F <= FACT_BLOCK:
             return G, "BLOCK", "false"
-        if P <= 0.05:
+        if P <= FACT_BLOCK:
             return G, "BLOCK", "false"
-        if F >= 0.95:
+        if F >= FACT_PASS:
             return G, "PASS", "true"
         if C >= self.tau_contra:
             return G, "BLOCK", "false"
@@ -392,7 +392,7 @@ class Pipeline:
         self.judge = judge or Judge(self.llm)
         try:
             import json as _j
-            _recs = _j.loads(open("data/records.json", encoding="utf-8").read())
+            _recs = _j.loads((DATA / "records.json").read_text(encoding="utf-8"))
         except Exception:
             _recs = []
         self.numeric = NumericCheck(records=_recs)
@@ -432,7 +432,7 @@ class Pipeline:
         ce = entities(claim)
         fnum, fnote = self.numeric.compare(claim, wide or ev)
         ent, contra, backend = self.judge.entail(claim, ev or docs[:2])
-        D = float(np.clip(ent - 0.35 * contra, 0, 1))
+        D = float(np.clip(ent - GROUND_PENALTY * contra, 0, 1))
         P, pnote = self.policy.check(claim, ce)
         G, decision, label = gate.decide(fnum, P, D, contra)
         return ClaimResult(
