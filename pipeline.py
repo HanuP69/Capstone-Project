@@ -20,7 +20,7 @@ from config import (ANSWER_CTX_CHAR, ANSWER_NUM_PREDICT, ATOMIC_MIN_PART_WORDS, 
                     MAX_ENTAIL_FOR_UNSUPPORTED, NLI_MODEL, NUMERIC_TOL_MONEY, NUMERIC_TOL_PCT,
                     OVERLAP_GATE, RECENCY_DEFAULT_AGE, RECENCY_LAMBDA, REGEN_NUM_PREDICT,
                     REGEN_ROUNDS, REGEN_TEMPERATURE, RERANK_CHAR_LIMIT, RERANK_MODEL, RERANK_TOP,
-                    RETRIEVE_K, ROOT, RRF_K, SEED, SPARSE_WEIGHT, WIDE_SENT_LIMIT)
+                    RETRIEVE_K, ROOT, RRF_K, SEED,                     SPARSE_WEIGHT, UNSUP_CLAIM_MIN_WORDS, WIDE_SENT_LIMIT)
 from pipeline_text import (age_years, entities, overlap_terms, parse_dates, parse_money,
                            parse_percent, sentences, tokenize)
 
@@ -459,7 +459,7 @@ class Pipeline:
         draft = self.llm.call(prompt, temperature=0.0, num_predict=DRAFT_NUM_PREDICT)
         claims = []
         for s in sentences(draft):
-            if len(s.split()) < 5:
+            if len(s.split()) < UNSUP_CLAIM_MIN_WORDS:
                 continue
             claims.append(self.verify(s.rstrip(".")))
         kept = []
