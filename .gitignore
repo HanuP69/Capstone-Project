@@ -17,6 +17,28 @@ results/
 .env
 .dev.vars
 
+# Local tooling, environments, and generated runtime data
+.work/
+.manus/
+.venv/
+**/.venv/
+venv/
+**/venv/
+env/
+**/env/
+node_modules/
+dist/
+.vite/
+coverage/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+nb_cache/
+nitjsr_chroma_db/
+*.egg-info/
+.env.*
+!.env.example
+
 # Large binaries / archives
 Capstone-Project-main.zip
 Freebuff-Setup-8f447f.exe

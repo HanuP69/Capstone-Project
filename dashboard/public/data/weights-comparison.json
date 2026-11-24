@@ -1,0 +1,54 @@
+[
+  {
+    "Weighting_Method": "Method 1: Equal Weights (Baseline)",
+    "w1_Fact": 0.333,
+    "w2_Policy": 0.333,
+    "w3_Grounding": 0.334,
+    "Derivation_Basis": "Equal a-priori weighting",
+    "NITJ_Accuracy": 91.7,
+    "PublicUniv_Accuracy": 100,
+    "MFAQ_Accuracy": 78.2,
+    "Cross_Dataset_Mean_Accuracy": 89.9,
+    "Cross_Dataset_Mean_Macro_F1": 0.862,
+    "NITJ_Hallucination_Rate": 2.5
+  },
+  {
+    "Weighting_Method": "Method 2: Fixed Heuristic Weights",
+    "w1_Fact": 0.4,
+    "w2_Policy": 0.3,
+    "w3_Grounding": 0.3,
+    "Derivation_Basis": "Empirical heuristic from proposal",
+    "NITJ_Accuracy": 91.7,
+    "PublicUniv_Accuracy": 100,
+    "MFAQ_Accuracy": 78.2,
+    "Cross_Dataset_Mean_Accuracy": 89.9,
+    "Cross_Dataset_Mean_Macro_F1": 0.862,
+    "NITJ_Hallucination_Rate": 2.5
+  },
+  {
+    "Weighting_Method": "Method 3: Grid Search Tuned",
+    "w1_Fact": 0.5,
+    "w2_Policy": 0.3,
+    "w3_Grounding": 0.2,
+    "Derivation_Basis": "Brute-force grid search on primary",
+    "NITJ_Accuracy": 91.7,
+    "PublicUniv_Accuracy": 100,
+    "MFAQ_Accuracy": 78.2,
+    "Cross_Dataset_Mean_Accuracy": 89.9,
+    "Cross_Dataset_Mean_Macro_F1": 0.862,
+    "NITJ_Hallucination_Rate": 2.5
+  },
+  {
+    "Weighting_Method": "Method 4: Logistic Regression Meta-Learner (Ours)",
+    "w1_Fact": 0.508,
+    "w2_Policy": 0.315,
+    "w3_Grounding": 0.177,
+    "Derivation_Basis": "MLE-derived via Level-1 Stacking",
+    "NITJ_Accuracy": 91.7,
+    "PublicUniv_Accuracy": 100,
+    "MFAQ_Accuracy": 78.2,
+    "Cross_Dataset_Mean_Accuracy": 89.9,
+    "Cross_Dataset_Mean_Macro_F1": 0.862,
+    "NITJ_Hallucination_Rate": 2.5
+  }
+]
