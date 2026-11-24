@@ -1,0 +1,16 @@
+[
+  {
+    "rule_id": "ATT_75",
+    "field": "percent",
+    "op": ">=",
+    "value": 75,
+    "keywords": [
+      "attendance"
+    ],
+    "enabled": true,
+    "source_chunk_id": "c00111",
+    "source_doc": "notices_5688.pdf",
+    "source_date": "2023-10-14",
+    "evidence": "\u0905\u093f\u0927\u02bf\u093e\u0924\u093e\u0936\u0948\u093f\u0197\u0915\u0915\u093e\u0915\u093e\u092f\u093e\u014a\u0932\u092f OFFICE OF THE DEAN ACADEMIC Ref. No. NITJSR/ACD/2023/342 Dated: 14-10-2023 NOTICE \u2013 S \u2013 58/2023 In pursuance to our academic calendar AY 2023-24 (Autumn Semester), all the UG students are instructed to login on (https://online.nitjsr.ac.in/endsem/) using their credentials to see their class attendance percentage in each subject. The cumulative attendance of a student in each "
+  }
+]

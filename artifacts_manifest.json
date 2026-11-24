@@ -1,0 +1,270 @@
+{
+  "generated_by": "make_manifest.py",
+  "git_commit": "2972cbf6b3e694b257c4b239608227f5475f7e07",
+  "entries": [
+    {
+      "number": 180,
+      "source": "data/corpus_stats.json",
+      "script": "select_corpus.py",
+      "note": ""
+    },
+    {
+      "number": 1423,
+      "source": "data/corpus_stats.json",
+      "script": "ingest.py",
+      "note": ""
+    },
+    {
+      "number": 403,
+      "source": "data/corpus_stats.json",
+      "script": "ingest.py",
+      "note": ""
+    },
+    {
+      "number": 1423,
+      "source": "data/index_manifest.json",
+      "script": "index.py",
+      "note": ""
+    },
+    {
+      "number": 768,
+      "source": "data/index_manifest.json",
+      "script": "index.py",
+      "note": ""
+    },
+    {
+      "number": 153,
+      "source": "data/split.json",
+      "script": "claims.py",
+      "note": ""
+    },
+    {
+      "number": 82,
+      "source": "data/split.json",
+      "script": "claims.py",
+      "note": ""
+    },
+    {
+      "number": 71,
+      "source": "data/split.json",
+      "script": "claims.py",
+      "note": ""
+    },
+    {
+      "number": 0.5,
+      "source": "data/thresholds.json",
+      "script": "evaluate.py (dev)",
+      "note": ""
+    },
+    {
+      "number": 0.62,
+      "source": "data/thresholds.json",
+      "script": "evaluate.py (dev)",
+      "note": ""
+    },
+    {
+      "number": 109,
+      "source": "results/condition_metrics.csv (pred_a)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.3211,
+      "source": "results/condition_metrics.csv (pred_a)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.216,
+      "source": "results/condition_metrics.csv (pred_a)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.0183,
+      "source": "results/condition_metrics.csv (pred_a)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.0,
+      "source": "results/condition_metrics.csv (pred_a)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 109,
+      "source": "results/condition_metrics.csv (pred_b)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.4954,
+      "source": "results/condition_metrics.csv (pred_b)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.4036,
+      "source": "results/condition_metrics.csv (pred_b)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.0183,
+      "source": "results/condition_metrics.csv (pred_b)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.0,
+      "source": "results/condition_metrics.csv (pred_b)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 109,
+      "source": "results/condition_metrics.csv (pred_c)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.4862,
+      "source": "results/condition_metrics.csv (pred_c)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.3933,
+      "source": "results/condition_metrics.csv (pred_c)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.0092,
+      "source": "results/condition_metrics.csv (pred_c)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.0,
+      "source": "results/condition_metrics.csv (pred_c)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 109,
+      "source": "results/condition_metrics.csv (pred_d)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.8807,
+      "source": "results/condition_metrics.csv (pred_d)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.8801,
+      "source": "results/condition_metrics.csv (pred_d)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.0367,
+      "source": "results/condition_metrics.csv (pred_d)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.3303,
+      "source": "results/condition_metrics.csv (pred_d)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 109,
+      "source": "results/stats.json",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.3853,
+      "source": "results/stats.json",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.0751,
+      "source": "results/stats.json",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.8807,
+      "source": "results/ablation.csv (cascade)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.5596,
+      "source": "results/ablation.csv (d_only)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.8624,
+      "source": "results/ablation.csv (f_only)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.3761,
+      "source": "results/ablation.csv (p_only)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.5596,
+      "source": "results/ablation.csv (g_only)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.9043,
+      "source": "results/subgroup_metrics.csv (single_fact)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.7333,
+      "source": "results/subgroup_metrics.csv (multi_fact)",
+      "script": "evaluate.py (test)",
+      "note": ""
+    },
+    {
+      "number": 0.951,
+      "source": "results/unsupervised_metrics.csv (A)",
+      "script": "evaluate.py (unsup)",
+      "note": ""
+    },
+    {
+      "number": 0.806,
+      "source": "results/unsupervised_metrics.csv (B)",
+      "script": "evaluate.py (unsup)",
+      "note": ""
+    },
+    {
+      "number": 0.924,
+      "source": "results/unsupervised_metrics.csv (C)",
+      "script": "evaluate.py (unsup)",
+      "note": ""
+    },
+    {
+      "number": 0.768,
+      "source": "results/unsupervised_metrics.csv (D)",
+      "script": "evaluate.py (unsup)",
+      "note": ""
+    }
+  ]
+}

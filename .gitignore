@@ -1,42 +1,22 @@
-# Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environments
-venv/
-env/
-ENV/
-.env
-.venv
-
-# Jupyter & IDEs
-.ipynb_checkpoints
-.vscode/
-.idea/
-
-# Data & Documents
+*.pyc
+index/
+cache/
 documents/
-
-# OS / Temporary
-Thumbs.db
-Desktop.ini
-$RECYCLE.BIN/
+archive/
+data/chunks.jsonl
+data/docs.jsonl
+data/scan.json
+data/selection.json
+data/records.json
+data/thresholds.json
+data/dev_predictions.csv
+results/
 *.log
+*.db
+.env
+.dev.vars
+
+# Large binaries / archives
+Capstone-Project-main.zip
+Freebuff-Setup-8f447f.exe

@@ -1,0 +1,28 @@
+{
+  "total": 153,
+  "dev_docs": 83,
+  "test_docs": 84,
+  "dev_claims": 82,
+  "test_claims": 71,
+  "labels": {
+    "true": 78,
+    "false": 75,
+    "unverifiable": 0
+  },
+  "methods": {
+    "multi_fact_perturbed": 15,
+    "multi_fact_verbatim": 18,
+    "perturbed_date": 31,
+    "perturbed_days": 4,
+    "perturbed_money": 4,
+    "perturbed_percent": 21,
+    "verbatim": 60
+  },
+  "categories": {
+    "Circulars": 52,
+    "Exam Dates": 42,
+    "Fee Deadlines": 17,
+    "Hostel Rules": 24,
+    "Syllabus Queries": 18
+  }
+}

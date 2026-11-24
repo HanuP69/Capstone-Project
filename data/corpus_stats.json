@@ -1,0 +1,26 @@
+{
+  "pdfs_selected": 180,
+  "pdfs_parsed": 180,
+  "failures": [],
+  "chunks_raw": 1826,
+  "chunks_dedup": 1423,
+  "duplicates_removed": 403,
+  "prose_chunks": 732,
+  "table_chunks": 691,
+  "with_date": 1124,
+  "with_ref": 755,
+  "latest_chunks": 326,
+  "median_prose_words": 159.5,
+  "max_prose_words": 240,
+  "categories": {
+    "Circulars": 508,
+    "Fee Deadlines": 214,
+    "Syllabus Queries": 166,
+    "Hostel Rules": 80,
+    "Exam Dates": 455
+  },
+  "date_range": [
+    "2023-07-26",
+    "2026-09-28"
+  ]
+}

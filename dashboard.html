@@ -1,543 +1,277 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NIT Jamshedpur Academic Query Verification Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: 600; }
-  </style>
-</head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
-
-  <!-- Top Banner / Navigation -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row items-center justify-between gap-3">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow">
-          <i class="fa-solid fa-shield-halved"></i>
-        </div>
-        <div>
-          <h1 class="text-lg font-bold text-slate-900 leading-tight">Academic Groundedness Verification Dashboard</h1>
-          <p class="text-xs text-slate-500">Research Capstone • Dept. of CSE, National Institute of Technology Jamshedpur</p>
-        </div>
-      </div>
-      <div class="flex flex-wrap items-center gap-2 text-xs">
-        <span class="inline-flex items-center px-2.5 py-1 rounded-full font-medium bg-emerald-100 text-emerald-800">
-          <i class="fa-solid fa-circle text-[8px] text-emerald-500 mr-1.5 animate-pulse"></i> ChromaDB Active (1,585 vectors)
-        </span>
-        <span class="inline-flex items-center px-2.5 py-1 rounded-full font-medium bg-blue-100 text-blue-800">
-          <i class="fa-regular fa-calendar-check mr-1.5"></i> Monday, 23 Nov 2026
-        </span>
-        <a href="/docs" target="_blank" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 font-medium text-slate-700 transition">
-          <i class="fa-solid fa-code mr-1"></i> Swagger API
-        </a>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main Container -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
-    <!-- Capstone Header Banner -->
-    <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-2xl p-6 text-white mb-6 shadow-md">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <span class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-blue-700/60 text-blue-200 mb-2">
-            B.Tech Capstone Project — 5th Semester
-          </span>
-          <h2 class="text-2xl font-bold">Multi-Agent Groundedness Verification Pipeline</h2>
-          <p class="text-sm text-blue-100 mt-1 max-w-2xl">
-            A Case Study on NIT Jamshedpur's Academic & Administrative Query Assistant, Validated Across Institutions
-          </p>
-          <p class="text-xs text-slate-300 mt-2">
-            <span class="font-semibold text-white">Supervisor:</span> Dr. Dilip Kumar | 
-            <span class="font-semibold text-white">Team:</span> Sujal Kumar Yadav, Tanishk S Pandey, Mohit Anand, Ankit Sharma, Dhirendra Pratap Dindoure, Himanshu Gupta
-          </p>
-        </div>
-        <div class="grid grid-cols-2 gap-3 text-center w-full md:w-auto">
-          <div class="bg-white/10 backdrop-blur rounded-xl p-3 border border-white/10">
-            <div class="text-2xl font-extrabold text-white">91.0%</div>
-            <div class="text-[11px] text-blue-200">Proposed Accuracy</div>
-          </div>
-          <div class="bg-white/10 backdrop-blur rounded-xl p-3 border border-white/10">
-            <div class="text-2xl font-extrabold text-emerald-400">12.5%</div>
-            <div class="text-[11px] text-blue-200">Missed Falsehoods</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Navigation Tabs -->
-    <div class="flex border-b border-slate-200 mb-6 space-x-6 text-sm font-medium">
-      <button onclick="switchTab('verifier')" id="tab-verifier" class="pb-3 text-slate-600 hover:text-blue-600 tab-active transition">
-        <i class="fa-solid fa-vial-circle-check mr-1.5"></i> Live Claim Verifier
-      </button>
-      <button onclick="switchTab('visualizations')" id="tab-visualizations" class="pb-3 text-slate-600 hover:text-blue-600 transition">
-        <i class="fa-solid fa-chart-line mr-1.5"></i> Proposal Figures & Results
-      </button>
-      <button onclick="switchTab('benchmarks')" id="tab-benchmarks" class="pb-3 text-slate-600 hover:text-blue-600 transition">
-        <i class="fa-solid fa-table-list mr-1.5"></i> Empirical Benchmarks & Audit Logs
-      </button>
-      <button onclick="switchTab('team')" id="tab-team" class="pb-3 text-slate-600 hover:text-blue-600 transition">
-        <i class="fa-solid fa-users mr-1.5"></i> Team Responsibilities
-      </button>
-    </div>
-
-    <!-- TAB 1: Live Interactive Claim Verifier -->
-    <div id="content-verifier" class="space-y-6">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- Input Panel (5 cols) -->
-        <div class="lg:col-span-5 bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
-          <h3 class="font-bold text-slate-800 text-sm flex items-center justify-between">
-            <span>Input Statement to Verify</span>
-            <span class="text-[11px] font-normal text-slate-500">Atomic claim verification</span>
-          </h3>
-
-          <div>
-            <textarea id="claimInput" rows="4" class="w-full text-sm rounded-lg border border-slate-300 p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" placeholder="Enter an academic statement or administrative policy claim..."></textarea>
-          </div>
-
-          <!-- Quick Sample Presets -->
-          <div>
-            <label class="text-xs font-semibold text-slate-600 block mb-1.5">Quick Evaluation Presets:</label>
-            <div class="flex flex-wrap gap-1.5 text-xs">
-              <button onclick="setSample('Tuition fee for general category B.Tech students is payable at the start of each semester through online portal.', 'NITJ_REAL')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-700 transition">
-                <i class="fa-solid fa-check text-emerald-600 mr-1"></i> Tuition Fee (True)
-              </button>
-              <button onclick="setSample('Hostel mess timings for dinner conclude around 10:00 PM as per warden regulations.', 'NITJ_REAL')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-700 transition">
-                <i class="fa-solid fa-check text-emerald-600 mr-1"></i> Hostel Curfew (True)
-              </button>
-              <button onclick="setSample('B.Tech tuition fee at NIT Jamshedpur can be paid in cash at the department security desk.', 'NITJ_REAL')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 rounded text-rose-700 transition">
-                <i class="fa-solid fa-xmark text-rose-600 mr-1"></i> Cash Fee (False)
-              </button>
-              <button onclick="setSample('End-semester examinations carry no minimum attendance requirement to appear.', 'NITJ_REAL')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 rounded text-rose-700 transition">
-                <i class="fa-solid fa-xmark text-rose-600 mr-1"></i> 0% Attendance (False)
-              </button>
-              <button onclick="setSample('NIT Jamshedpur hostels provide complimentary 5G virtual reality gaming lounges in every wing.', 'NITJ_REAL')" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 rounded text-amber-700 transition">
-                <i class="fa-solid fa-triangle-exclamation text-amber-600 mr-1"></i> 5G VR Lounge (Unverifiable)
-              </button>
-            </div>
-          </div>
-
-          <!-- Configuration Controls -->
-          <div class="grid grid-cols-2 gap-3 pt-2 text-xs">
-            <div>
-              <label class="font-semibold text-slate-600 block mb-1">Target Corpus:</label>
-              <select id="instSelect" class="w-full rounded border border-slate-300 p-1.5 bg-white text-xs">
-                <option value="NITJ_REAL" selected>NITJ Real Corpus (ChromaDB)</option>
-                <option value="NITJ">NITJ (Synthetic Benchmark)</option>
-                <option value="PUBLIC">Public Univ (Secondary)</option>
-              </select>
-            </div>
-            <div>
-              <label class="font-semibold text-slate-600 block mb-1">Retrieval Backend:</label>
-              <select id="retrievalSelect" class="w-full rounded border border-slate-300 p-1.5 bg-white text-xs">
-                <option value="hybrid" selected>Hybrid RRF (Chroma + BM25)</option>
-                <option value="dense">Dense Vector (ChromaDB)</option>
-                <option value="bm25">Sparse Lexical (BM25Okapi)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="flex items-center space-x-2 pt-1 text-xs">
-            <input type="checkbox" id="metaLearnerCheck" checked class="rounded border-slate-300 text-blue-600">
-            <label for="metaLearnerCheck" class="text-slate-700 font-medium cursor-pointer">
-              Use MLE Meta-Learner Weights (0.508 / 0.315 / 0.177)
-            </label>
-          </div>
-
-          <button onclick="verifyClaim()" id="btnVerify" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition shadow flex items-center justify-center space-x-2">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <span>Verify Statement</span>
-          </button>
-        </div>
-
-        <!-- Output Panel (7 cols) -->
-        <div class="lg:col-span-7 bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-5">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 class="font-bold text-slate-800 text-sm">Multi-Agent Verification Verdict</h3>
-            <span id="decisionBadge" class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-slate-100 text-slate-600">
-              Awaiting Input
-            </span>
-          </div>
-
-          <!-- Overall Groundedness Gauge -->
-          <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <div class="text-xs uppercase tracking-wider font-bold text-slate-500">Unified Groundedness Confidence G(c)</div>
-              <div class="text-3xl font-extrabold text-slate-900 mt-1" id="gScoreDisplay">--</div>
-              <div class="text-xs text-slate-500 mt-1">Formula: G(c) = w₁·F(c) + w₂·P(c) + w₃·D(c)</div>
-            </div>
-            <div class="w-full sm:w-48 bg-slate-200 rounded-full h-3.5 overflow-hidden">
-              <div id="gProgressBar" class="bg-blue-600 h-3.5 rounded-full transition-all duration-500" style="width: 0%"></div>
-            </div>
-          </div>
-
-          <!-- Tri-Agent Signals Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <!-- Fact Agent -->
-            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-600">Fact-Check (F)</span>
-                <span id="fScoreBadge" class="text-xs font-bold text-slate-700">--</span>
-              </div>
-              <p id="fExpText" class="text-[11px] text-slate-500 mt-2 leading-relaxed">Structured institutional records check.</p>
-            </div>
-            <!-- Policy Agent -->
-            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-600">Policy-Rule (P)</span>
-                <span id="pScoreBadge" class="text-xs font-bold text-slate-700">--</span>
-              </div>
-              <p id="pExpText" class="text-[11px] text-slate-500 mt-2 leading-relaxed">Deterministic academic regulations check.</p>
-            </div>
-            <!-- Grounding Agent -->
-            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-600">Chroma Grounding (D)</span>
-                <span id="dScoreBadge" class="text-xs font-bold text-slate-700">--</span>
-              </div>
-              <p id="dExpText" class="text-[11px] text-slate-500 mt-2 leading-relaxed">Hybrid RRF semantic vector match.</p>
-            </div>
-          </div>
-
-          <!-- Regenerated Output (Feedback Loop) -->
-          <div id="regenSection" class="hidden p-4 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 space-y-1">
-            <div class="font-bold flex items-center text-blue-800">
-              <i class="fa-solid fa-arrows-rotate mr-1.5 animate-spin"></i> Regenerated Grounded Statement (Closed Feedback Loop):
-            </div>
-            <p id="regenText" class="italic leading-relaxed"></p>
-          </div>
-
-          <!-- Retrieved Context Accordion -->
-          <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-slate-600 block">Top Retrieved Institutional Context:</label>
-            <div id="retrievedCtxText" class="text-xs text-slate-700 p-3 bg-slate-50 rounded-lg border border-slate-200 max-h-36 overflow-y-auto leading-relaxed">
-              No verification run yet. Select a sample above and click Verify Statement.
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- TAB 2: Proposal Figures & Visualizations -->
-    <div id="content-visualizations" class="hidden space-y-6">
-      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-900">
-        <i class="fa-solid fa-circle-info mr-1 text-blue-700"></i>
-        <strong>Proposal Section 8 Compliance:</strong> The publication charts below correspond exactly to the evaluation specifications on Page 4 of the approved Capstone Proposal, including ROC/PR curves, Confusion Matrix, Agent Ablation, and Hallucination Mitigation.
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- ROC Curve -->
-        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-2">
-          <h4 class="font-bold text-sm text-slate-800 flex items-center justify-between">
-            <span>1. ROC Curve — Hallucination Detection</span>
-            <span class="text-xs text-blue-600 font-semibold">AUC = 0.942</span>
-          </h4>
-          <img src="/evaluation_results/roc_curve_comparison.png" alt="ROC Curve" class="w-full rounded border border-slate-100 hover:opacity-95 transition">
-          <p class="text-xs text-slate-500">Proposal Page 4, Top Left. Compares Proposed Multi-Agent Pipeline vs Dense RAG vs Plain LLM.</p>
-        </div>
-
-        <!-- Confusion Matrix -->
-        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-2">
-          <h4 class="font-bold text-sm text-slate-800 flex items-center justify-between">
-            <span>2. Confusion Matrix — Claim Verification</span>
-            <span class="text-xs text-emerald-600 font-semibold">91.0% Accuracy</span>
-          </h4>
-          <img src="/evaluation_results/confusion_matrix_groundedness.png" alt="Confusion Matrix" class="w-full rounded border border-slate-100 hover:opacity-95 transition">
-          <p class="text-xs text-slate-500">Proposal Page 4, Top Right. Grounded vs Hallucinated claims classification.</p>
-        </div>
-
-        <!-- Ablation Study -->
-        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-2">
-          <h4 class="font-bold text-sm text-slate-800 flex items-center justify-between">
-            <span>3. Ablation Study — Effect of Removing Each Agent</span>
-            <span class="text-xs text-purple-600 font-semibold">All 3 Agents Essential</span>
-          </h4>
-          <img src="/evaluation_results/ablation_study_chart.png" alt="Ablation Study" class="w-full rounded border border-slate-100 hover:opacity-95 transition">
-          <p class="text-xs text-slate-500">Proposal Page 4, Bottom Left. Demonstrates performance drop when removing Fact, Policy, or Grounding.</p>
-        </div>
-
-        <!-- Per Category Hallucination -->
-        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-2">
-          <h4 class="font-bold text-sm text-slate-800 flex items-center justify-between">
-            <span>4. Per-Category Hallucination Mitigation (Real NITJSR)</span>
-            <span class="text-xs text-emerald-600 font-semibold">87.5% Reduction</span>
-          </h4>
-          <img src="/evaluation_results/nitjsr_per_category_hallucination.png" alt="Per Category Hallucination" class="w-full rounded border border-slate-100 hover:opacity-95 transition">
-          <p class="text-xs text-slate-500">Proposal Page 4, Bottom Right. Benchmarked across Exam Dates, Fee Deadlines, Hostel Rules, Circulars, Syllabus.</p>
-        </div>
-
-        <!-- 4 Condition Comparison (NITJSR Case Study) -->
-        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-2">
-          <h4 class="font-bold text-sm text-slate-800 flex items-center justify-between">
-            <span>5. NITJSR Real Case Study (4-Condition Comparison)</span>
-            <span class="text-xs text-blue-600 font-semibold">Macro-F1 = 0.918</span>
-          </h4>
-          <img src="/evaluation_results/nitjsr_4condition_comparison.png" alt="4 Condition Comparison" class="w-full rounded border border-slate-100 hover:opacity-95 transition">
-          <p class="text-xs text-slate-500">Head-to-head comparison of Plain LLM vs Dense RAG vs Self-Consistency vs Proposed Pipeline.</p>
-        </div>
-
-        <!-- RAG Triad Metrics -->
-        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-2">
-          <h4 class="font-bold text-sm text-slate-800 flex items-center justify-between">
-            <span>6. Unsupervised RAG Triad Metrics (30 Real Campus Queries)</span>
-            <span class="text-xs text-indigo-600 font-semibold">93.6% Faithfulness</span>
-          </h4>
-          <img src="/evaluation_results/nitjsr_rag_triad_metrics.png" alt="RAG Triad Metrics" class="w-full rounded border border-slate-100 hover:opacity-95 transition">
-          <p class="text-xs text-slate-500">Reference-free evaluation measuring Faithfulness (0.936), Context Relevance (0.906), Answer Relevance (0.920).</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 3: Empirical Benchmarks & Audit Logs -->
-    <div id="content-benchmarks" class="hidden space-y-6">
-      
-      <!-- Supervised Results Table -->
-      <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-3">
-        <h4 class="font-bold text-sm text-slate-800">Supervised Benchmark Results (100 Real NIT Jamshedpur Claims)</h4>
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs text-left border-collapse">
-            <thead>
-              <tr class="bg-slate-100 border-b border-slate-200 text-slate-700">
-                <th class="p-2.5 font-semibold">Experimental Condition</th>
-                <th class="p-2.5 font-semibold text-center">Accuracy</th>
-                <th class="p-2.5 font-semibold text-center">Precision</th>
-                <th class="p-2.5 font-semibold text-center">Recall</th>
-                <th class="p-2.5 font-semibold text-center">Macro-F1</th>
-                <th class="p-2.5 font-semibold text-center">Missed Falsehood Rate</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200">
-              <tr>
-                <td class="p-2.5 font-medium text-slate-800">Baseline A: Plain LLM (Ungrounded)</td>
-                <td class="p-2.5 text-center">40.0%</td>
-                <td class="p-2.5 text-center">0.400</td>
-                <td class="p-2.5 text-center">1.000</td>
-                <td class="p-2.5 text-center">0.571</td>
-                <td class="p-2.5 text-center font-bold text-rose-600">100.0%</td>
-              </tr>
-              <tr>
-                <td class="p-2.5 font-medium text-slate-800">Baseline B: Standard Dense RAG</td>
-                <td class="p-2.5 text-center">69.0%</td>
-                <td class="p-2.5 text-center">0.563</td>
-                <td class="p-2.5 text-center">1.000</td>
-                <td class="p-2.5 text-center">0.721</td>
-                <td class="p-2.5 text-center font-bold text-amber-600">77.5%</td>
-              </tr>
-              <tr>
-                <td class="p-2.5 font-medium text-slate-800">Baseline C: Self-Consistency (T=3)</td>
-                <td class="p-2.5 text-center">60.0%</td>
-                <td class="p-2.5 text-center">0.500</td>
-                <td class="p-2.5 text-center">1.000</td>
-                <td class="p-2.5 text-center">0.667</td>
-                <td class="p-2.5 text-center font-bold text-rose-600">100.0%</td>
-              </tr>
-              <tr class="bg-blue-50/60 font-semibold text-blue-900">
-                <td class="p-2.5">Proposed: Multi-Agent Pipeline (ChromaDB + MLE)</td>
-                <td class="p-2.5 text-center text-blue-700 font-bold">91.0%</td>
-                <td class="p-2.5 text-center">0.867</td>
-                <td class="p-2.5 text-center">0.975</td>
-                <td class="p-2.5 text-center font-bold">0.918</td>
-                <td class="p-2.5 text-center font-bold text-emerald-600">12.5%</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- RAG Triad Table -->
-      <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-3">
-        <h4 class="font-bold text-sm text-slate-800">Unsupervised RAG Triad Metrics (30 Real Campus Queries)</h4>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-          <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
-            <div class="text-2xl font-bold text-blue-700">0.936</div>
-            <div class="text-xs font-semibold text-slate-700 mt-1">Faithfulness / Groundedness</div>
-            <div class="text-[11px] text-slate-500 mt-0.5">93.6% claims entailed by circulars</div>
-          </div>
-          <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
-            <div class="text-2xl font-bold text-indigo-700">0.906</div>
-            <div class="text-xs font-semibold text-slate-700 mt-1">Context Relevance</div>
-            <div class="text-[11px] text-slate-500 mt-0.5">High signal-to-noise ratio</div>
-          </div>
-          <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
-            <div class="text-2xl font-bold text-emerald-700">0.920</div>
-            <div class="text-xs font-semibold text-slate-700 mt-1">Answer Relevance</div>
-            <div class="text-[11px] text-slate-500 mt-0.5">Direct query answering</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- TAB 4: Team Responsibilities -->
-    <div id="content-team" class="hidden space-y-6">
-      <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm space-y-4">
-        <div class="border-b border-slate-200 pb-3">
-          <h4 class="font-bold text-base text-slate-900">Capstone Project Team & Responsibilities</h4>
-          <p class="text-xs text-slate-500">Department of Computer Science & Engineering, National Institute of Technology Jamshedpur</p>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs text-left border-collapse">
-            <thead>
-              <tr class="bg-slate-100 border-b border-slate-200 text-slate-700">
-                <th class="p-3 font-semibold">Student Name</th>
-                <th class="p-3 font-semibold">Roll Number</th>
-                <th class="p-3 font-semibold">Primary Responsibility (from Proposal)</th>
-                <th class="p-3 font-semibold">Implementation Status</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200">
-              <tr>
-                <td class="p-3 font-bold text-slate-900">Sujal Kumar Yadav</td>
-                <td class="p-3 font-mono text-slate-600">2024UGCS033</td>
-                <td class="p-3 text-slate-700">Verification Agent Architecture & Orchestration</td>
-                <td class="p-3 text-emerald-600 font-semibold"><i class="fa-solid fa-check mr-1"></i> Complete (`verification_pipeline.py`)</td>
-              </tr>
-              <tr>
-                <td class="p-3 font-bold text-slate-900">Tanishk S Pandey</td>
-                <td class="p-3 font-mono text-slate-600">2024UGCS037</td>
-                <td class="p-3 text-slate-700">LLM Response Generator & Retrieval (RAG) Layer</td>
-                <td class="p-3 text-emerald-600 font-semibold"><i class="fa-solid fa-check mr-1"></i> Complete (ChromaDB + FAISS + BM25 RRF)</td>
-              </tr>
-              <tr>
-                <td class="p-3 font-bold text-slate-900">Mohit Anand</td>
-                <td class="p-3 font-mono text-slate-600">2024UGCS072</td>
-                <td class="p-3 text-slate-700">Groundedness Scoring Algorithm & Evaluation</td>
-                <td class="p-3 text-emerald-600 font-semibold"><i class="fa-solid fa-check mr-1"></i> Complete (MLE Logistic Regression Weights)</td>
-              </tr>
-              <tr>
-                <td class="p-3 font-bold text-slate-900">Ankit Sharma</td>
-                <td class="p-3 font-mono text-slate-600">2024UGCS063</td>
-                <td class="p-3 text-slate-700">Fact-Check & Policy-Compliance Agents, Backend API</td>
-                <td class="p-3 text-emerald-600 font-semibold"><i class="fa-solid fa-check mr-1"></i> Complete (`app.py` FastAPI Microservice)</td>
-              </tr>
-              <tr>
-                <td class="p-3 font-bold text-slate-900">Dhirendra Pratap Dindoure</td>
-                <td class="p-3 font-mono text-slate-600">2024UGCS084</td>
-                <td class="p-3 text-slate-700">Web Dashboard & Results Visualization</td>
-                <td class="p-3 text-emerald-600 font-semibold"><i class="fa-solid fa-check mr-1"></i> Complete (Interactive Dashboard UI)</td>
-              </tr>
-              <tr>
-                <td class="p-3 font-bold text-slate-900">Himanshu Gupta</td>
-                <td class="p-3 font-mono text-slate-600">2024UGCS113</td>
-                <td class="p-3 text-slate-700">Dataset Curation (NITJ + Public), Baselines & Human Evaluation</td>
-                <td class="p-3 text-emerald-600 font-semibold"><i class="fa-solid fa-check mr-1"></i> Complete (2,241 PDFs + MFAQ + Kappa)</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-  </main>
-
-  <script>
-    function switchTab(tab) {
-      ['verifier', 'visualizations', 'benchmarks', 'team'].forEach(t => {
-        document.getElementById('content-' + t).classList.add('hidden');
-        document.getElementById('tab-' + t).classList.remove('tab-active');
-      });
-      document.getElementById('content-' + tab).classList.remove('hidden');
-      document.getElementById('tab-' + tab).classList.add('tab-active');
+<html><head><meta charset='utf-8'><title>NITJ verification</title>
+<style>body{font-family:system-ui;margin:2rem;max-width:1100px}td,th{border:1px solid #ccc;padding:6px}th{background:#f2f2f2}</style></head><body>
+<h1>Groundedness verification dashboard</h1>
+<p>1423 chunks over 180 PDFs; 1423 indexed vectors.</p>
+<h2>Test set</h2>
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>condition</th>
+      <th>n</th>
+      <th>accuracy</th>
+      <th>macro_precision</th>
+      <th>macro_recall</th>
+      <th>macro_f1</th>
+      <th>missed_falsehood_rate</th>
+      <th>abstention_rate</th>
+      <th>per_class_precision</th>
+      <th>per_class_recall</th>
+      <th>per_class_f1</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>pred_a</td>
+      <td>109</td>
+      <td>0.3211</td>
+      <td>0.1637</td>
+      <td>0.3328</td>
+      <td>0.2160</td>
+      <td>0.0183</td>
+      <td>0.0000</td>
+      <td>{'true': 0.062, 'false': 0.429, 'unverifiable': 0.0}</td>
+      <td>{'true': 0.056, 'false': 0.943, 'unverifiable': 0.0}</td>
+      <td>{'true': 0.059, 'false': 0.589, 'unverifiable': 0.0}</td>
+    </tr>
+    <tr>
+      <td>pred_b</td>
+      <td>109</td>
+      <td>0.4954</td>
+      <td>0.3668</td>
+      <td>0.5087</td>
+      <td>0.4036</td>
+      <td>0.0183</td>
+      <td>0.0000</td>
+      <td>{'true': 0.677, 'false': 0.423, 'unverifiable': 0.0}</td>
+      <td>{'true': 0.583, 'false': 0.943, 'unverifiable': 0.0}</td>
+      <td>{'true': 0.627, 'false': 0.584, 'unverifiable': 0.0}</td>
+    </tr>
+    <tr>
+      <td>pred_c</td>
+      <td>109</td>
+      <td>0.4862</td>
+      <td>0.3661</td>
+      <td>0.4997</td>
+      <td>0.3933</td>
+      <td>0.0092</td>
+      <td>0.0000</td>
+      <td>{'true': 0.679, 'false': 0.42, 'unverifiable': 0.0}</td>
+      <td>{'true': 0.528, 'false': 0.971, 'unverifiable': 0.0}</td>
+      <td>{'true': 0.594, 'false': 0.586, 'unverifiable': 0.0}</td>
+    </tr>
+    <tr>
+      <td>pred_d</td>
+      <td>109</td>
+      <td>0.8807</td>
+      <td>0.8846</td>
+      <td>0.8795</td>
+      <td>0.8801</td>
+      <td>0.0367</td>
+      <td>0.3303</td>
+      <td>{'true': 0.879, 'false': 0.775, 'unverifiable': 1.0}</td>
+      <td>{'true': 0.806, 'false': 0.886, 'unverifiable': 0.947}</td>
+      <td>{'true': 0.841, 'false': 0.827, 'unverifiable': 0.973}</td>
+    </tr>
+  </tbody>
+</table>
+<h2>Unsupervised</h2>
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>condition</th>
+      <th>unsupported_per_answer</th>
+      <th>answered_rate</th>
+      <th>faithful_rate</th>
+      <th>claims_per_answer</th>
+      <th>context_relevance</th>
+      <th>answer_relevance</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>A</td>
+      <td>0.951</td>
+      <td>0.792</td>
+      <td>0.000</td>
+      <td>2.917</td>
+      <td>0.096</td>
+      <td>0.743</td>
+    </tr>
+    <tr>
+      <td>B</td>
+      <td>0.806</td>
+      <td>0.958</td>
+      <td>0.042</td>
+      <td>2.708</td>
+      <td>0.096</td>
+      <td>0.170</td>
+    </tr>
+    <tr>
+      <td>C</td>
+      <td>0.924</td>
+      <td>0.833</td>
+      <td>0.000</td>
+      <td>2.917</td>
+      <td>0.096</td>
+      <td>0.660</td>
+    </tr>
+    <tr>
+      <td>D</td>
+      <td>0.768</td>
+      <td>0.958</td>
+      <td>0.083</td>
+      <td>2.417</td>
+      <td>0.096</td>
+      <td>0.155</td>
+    </tr>
+  </tbody>
+</table>
+<h2>Statistics</h2><pre>{
+  "n_scored": 109,
+  "n_excluded_contaminated": 0,
+  "mcnemar_d_vs_b": {
+    "d_better": 45,
+    "b_better": 3,
+    "p_value": 0.0
+  },
+  "mcnemar_d_vs_a": {
+    "d_better": 65,
+    "b_better": 4,
+    "p_value": 0.0
+  },
+  "bootstrap_d_minus_b": {
+    "delta": 0.3853,
+    "ci_low": 0.2844,
+    "ci_high": 0.4862
+  },
+  "confusion_d": [
+    [
+      29,
+      7,
+      0
+    ],
+    [
+      4,
+      31,
+      0
+    ],
+    [
+      0,
+      2,
+      36
+    ]
+  ],
+  "labels": [
+    "true",
+    "false",
+    "unverifiable"
+  ],
+  "judge_backend": "nli",
+  "seconds": 674.8,
+  "brier_d": 0.0751,
+  "calibration_d": [
+    {
+      "bin": "(-0.001, 0.1]",
+      "n": 27,
+      "mean_pred": 0.005,
+      "frac_true": 0.0
+    },
+    {
+      "bin": "(0.1, 0.2]",
+      "n": 3,
+      "mean_pred": 0.15,
+      "frac_true": 0.333
+    },
+    {
+      "bin": "(0.3, 0.4]",
+      "n": 1,
+      "mean_pred": 0.308,
+      "frac_true": 0.0
+    },
+    {
+      "bin": "(0.4, 0.5]",
+      "n": 2,
+      "mean_pred": 0.452,
+      "frac_true": 0.0
+    },
+    {
+      "bin": "(0.5, 0.6]",
+      "n": 5,
+      "mean_pred": 0.554,
+      "frac_true": 0.8
+    },
+    {
+      "bin": "(0.6, 0.7]",
+      "n": 15,
+      "mean_pred": 0.649,
+      "frac_true": 0.867
+    },
+    {
+      "bin": "(0.7, 0.8]",
+      "n": 4,
+      "mean_pred": 0.747,
+      "frac_true": 1.0
+    },
+    {
+      "bin": "(0.8, 0.9]",
+      "n": 4,
+      "mean_pred": 0.869,
+      "frac_true": 1.0
+    },
+    {
+      "bin": "(0.9, 1.0]",
+      "n": 10,
+      "mean_pred": 0.958,
+      "frac_true": 1.0
     }
-
-    function setSample(claim, inst) {
-      document.getElementById('claimInput').value = claim;
-      document.getElementById('instSelect').value = inst;
-      verifyClaim();
-    }
-
-    async function verifyClaim() {
-      const claim = document.getElementById('claimInput').value.trim();
-      if (!claim) {
-        alert('Please enter a claim to verify.');
-        return;
-      }
-
-      const inst = document.getElementById('instSelect').value;
-      const retrieval = document.getElementById('retrievalSelect').value;
-      const meta = document.getElementById('metaLearnerCheck').checked;
-
-      const btn = document.getElementById('btnVerify');
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Verifying...';
-
-      try {
-        const res = await fetch('/api/verify-claim', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            claim: claim,
-            institution: inst,
-            retrieval_mode: retrieval,
-            use_meta_learner: meta
-          })
-        });
-
-        const data = await res.json();
-
-        // Update Groundedness Score & Meter
-        const g = data.G_score;
-        document.getElementById('gScoreDisplay').innerText = g.toFixed(3);
-        const bar = document.getElementById('gProgressBar');
-        const pct = Math.min(100, Math.max(0, g * 100));
-        bar.style.width = pct + '%';
-
-        // Decision Badge
-        const badge = document.getElementById('decisionBadge');
-        if (data.decision === 'PASS') {
-          badge.className = 'px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300';
-          badge.innerText = 'PASS (VERIFIED)';
-          bar.className = 'bg-emerald-600 h-3.5 rounded-full transition-all duration-500';
-        } else if (data.decision === 'FLAG') {
-          badge.className = 'px-3 py-1 rounded-full text-xs font-bold uppercase bg-amber-100 text-amber-800 border border-amber-300';
-          badge.innerText = 'FLAG (UNVERIFIABLE)';
-          bar.className = 'bg-amber-500 h-3.5 rounded-full transition-all duration-500';
-        } else {
-          badge.className = 'px-3 py-1 rounded-full text-xs font-bold uppercase bg-rose-100 text-rose-800 border border-rose-300';
-          badge.innerText = 'BLOCK (HALLUCINATED)';
-          bar.className = 'bg-rose-600 h-3.5 rounded-full transition-all duration-500';
-        }
-
-        // Sub scores
-        document.getElementById('fScoreBadge').innerText = data.F_score.toFixed(2);
-        document.getElementById('fExpText').innerText = data.fact_explanation || 'No specific entity record matched.';
-        document.getElementById('pScoreBadge').innerText = data.P_score.toFixed(2);
-        document.getElementById('pExpText').innerText = data.policy_explanation || 'No policy conflict detected.';
-        document.getElementById('dScoreBadge').innerText = data.D_score.toFixed(2);
-        document.getElementById('dExpText').innerText = `Method: ${data.retrieval_method || retrieval}`;
-
-        // Regeneration
-        const regenSec = document.getElementById('regenSection');
-        if (data.regenerated_claim) {
-          regenSec.classList.remove('hidden');
-          document.getElementById('regenText').innerText = data.regenerated_claim;
-        } else {
-          regenSec.classList.add('hidden');
-        }
-
-        // Context
-        const ctxBox = document.getElementById('retrievedCtxText');
-        if (data.retrieved_contexts && data.retrieved_contexts.length > 0) {
-          ctxBox.innerText = data.retrieved_contexts[0];
-        } else {
-          ctxBox.innerText = 'No relevant context returned from vector database.';
-        }
-
-      } catch (err) {
-        alert('Verification error: ' + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i><span>Verify Statement</span>';
-      }
-    }
-  </script>
-</body>
-</html>
+  ]
+}</pre>
+<h2>Ablation</h2><table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>rule</th>
+      <th>accuracy</th>
+      <th>macro_f1</th>
+      <th>missed_falsehood</th>
+      <th>abstention</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>cascade</td>
+      <td>0.8807</td>
+      <td>0.8801</td>
+      <td>0.0367</td>
+      <td>0.3303</td>
+    </tr>
+    <tr>
+      <td>d_only</td>
+      <td>0.5596</td>
+      <td>0.4918</td>
+      <td>0.0459</td>
+      <td>0.0642</td>
+    </tr>
+    <tr>
+      <td>f_only</td>
+      <td>0.8624</td>
+      <td>0.8579</td>
+      <td>0.0550</td>
+      <td>0.4037</td>
+    </tr>
+    <tr>
+      <td>p_only</td>
+      <td>0.3761</td>
+      <td>0.2303</td>
+      <td>0.3119</td>
+      <td>0.9541</td>
+    </tr>
+    <tr>
+      <td>g_only</td>
+      <td>0.5596</td>
+      <td>0.5051</td>
+      <td>0.0367</td>
+      <td>0.0734</td>
+    </tr>
+  </tbody>
+</table>
+</body></html>
